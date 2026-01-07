@@ -2,6 +2,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from rag_engine import RAGChatbot
 from schemas import ChatRequest, ChatResponse, AddDocumentRequest
+from fastapi import UploadFile, File
+from pathlib import Path
+import shutil
+
+UPLOAD_DIR = Path("uploads")
+UPLOAD_DIR.mkdir(exist_ok=True) 
 
 app = FastAPI()
 
@@ -44,3 +50,34 @@ def save_kb():
 def load_kb():
     chatbot.load_knowledge_base("storage/knowledge_base.pkl")
     return {"status": "loaded"}
+
+@app.post("/upload")
+async def upload_file(file: UploadFile = File(...)):
+    file_path = UPLOAD_DIR / file.filename
+
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    # Add document to RAG
+    chatbot.add_document(str(file_path))
+
+    return {
+        "status": "success",
+        "filename": file.filename
+    }
+
+@app.post("/upload")
+async def upload_file(file: UploadFile = File(...)):
+    file_path = UPLOAD_DIR / file.filename
+
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    success = chatbot.add_document(str(file_path))
+
+    print("📚 VECTOR STORE SIZE:", len(chatbot.vector_store.documents))
+
+    return {
+        "status": "success" if success else "failed",
+        "filename": file.filename
+    }

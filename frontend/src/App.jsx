@@ -2,6 +2,7 @@ import { useState } from "react";
 import ChatBox from "./components/ChatBox";
 import DocumentManager from "./components/DocumentManager";
 import Header from "./components/Header";
+// import FileUpload from "./components/FileUpload";
 
 export default function App() {
   const [useRag, setUseRag] = useState(true);
@@ -23,6 +24,7 @@ export default function App() {
 
       <div className="layout">
         <DocumentManager />
+        {/* <FileUpload /> */}
         <ChatBox useRag={useRag} />
       </div>
     </div>

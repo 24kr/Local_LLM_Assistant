@@ -11,3 +11,5 @@ class ChatResponse(BaseModel):
 
 class AddDocumentRequest(BaseModel):
     path: str
+
+
