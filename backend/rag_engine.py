@@ -4,22 +4,33 @@ from pathlib import Path
 import PyPDF2
 from docx import Document
 import pandas as pd
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Optional
 import pickle
-import re
+import logging
+from datetime import datetime
+import hashlib
+
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # =========================
 # Vector Store
 # =========================
 
 class SimpleVectorStore:
-    """Simple in-memory vector store using cosine similarity"""
+    """Enhanced in-memory vector store with deduplication"""
 
     def __init__(self):
         self.documents: List[str] = []
         self.embeddings: List[np.ndarray] = []
         self.metadatas: List[Dict] = []
         self.ids: List[str] = []
+        self.document_hashes: set = set()
+
+    def _compute_hash(self, text: str) -> str:
+        """Compute hash for deduplication"""
+        return hashlib.md5(text.encode()).hexdigest()
 
     def add(
         self,
@@ -28,23 +39,45 @@ class SimpleVectorStore:
         documents: List[str],
         metadatas: List[Dict]
     ):
+        """Add documents with deduplication"""
         for id_, emb, doc, meta in zip(ids, embeddings, documents, metadatas):
+            doc_hash = self._compute_hash(doc)
+            
+            # Skip if duplicate
+            if doc_hash in self.document_hashes:
+                logger.debug(f"Skipping duplicate document: {id_}")
+                continue
+            
             self.ids.append(id_)
             self.embeddings.append(np.array(emb, dtype=np.float32))
             self.documents.append(doc)
             self.metadatas.append(meta)
+            self.document_hashes.add(doc_hash)
 
     @staticmethod
     def cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
-        return float(np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b)))
+        """Calculate cosine similarity between two vectors"""
+        norm_a = np.linalg.norm(a)
+        norm_b = np.linalg.norm(b)
+        
+        if norm_a == 0 or norm_b == 0:
+            return 0.0
+            
+        return float(np.dot(a, b) / (norm_a * norm_b))
 
     def query(
         self,
         query_embedding: List[float],
         n_results: int = 3
     ) -> Dict:
+        """Query vector store for similar documents"""
         if not self.embeddings:
-            return {"documents": [[]], "metadatas": [[]], "distances": [[]]}
+            return {
+                "documents": [[]],
+                "metadatas": [[]],
+                "distances": [[]],
+                "ids": [[]]
+            }
 
         query_vec = np.array(query_embedding, dtype=np.float32)
 
@@ -58,40 +91,80 @@ class SimpleVectorStore:
         return {
             "documents": [[self.documents[i] for i in top_indices]],
             "metadatas": [[self.metadatas[i] for i in top_indices]],
-            "distances": [[1 - similarities[i] for i in top_indices]]
+            "distances": [[1 - similarities[i] for i in top_indices]],
+            "ids": [[self.ids[i] for i in top_indices]]
         }
 
     def get(self) -> Dict:
+        """Get all documents"""
         return {
             "ids": self.ids,
             "documents": self.documents,
             "metadatas": self.metadatas
         }
 
+    def delete_by_source(self, source: str) -> int:
+        """Delete all documents from a specific source"""
+        indices_to_remove = []
+        
+        for i, meta in enumerate(self.metadatas):
+            if meta.get("source") == source:
+                indices_to_remove.append(i)
+        
+        # Remove in reverse order to maintain indices
+        for i in sorted(indices_to_remove, reverse=True):
+            doc_hash = self._compute_hash(self.documents[i])
+            self.document_hashes.discard(doc_hash)
+            
+            del self.ids[i]
+            del self.embeddings[i]
+            del self.documents[i]
+            del self.metadatas[i]
+        
+        logger.info(f"Removed {len(indices_to_remove)} chunks from {source}")
+        return len(indices_to_remove)
+
     def clear(self):
+        """Clear all data"""
         self.documents.clear()
         self.embeddings.clear()
         self.metadatas.clear()
         self.ids.clear()
+        self.document_hashes.clear()
 
     def save(self, filepath: str):
-        data = {
-            "ids": self.ids,
-            "embeddings": [emb.tolist() for emb in self.embeddings],
-            "documents": self.documents,
-            "metadatas": self.metadatas
-        }
-        with open(filepath, "wb") as f:
-            pickle.dump(data, f)
+        """Save vector store to disk"""
+        try:
+            data = {
+                "ids": self.ids,
+                "embeddings": [emb.tolist() for emb in self.embeddings],
+                "documents": self.documents,
+                "metadatas": self.metadatas,
+                "document_hashes": list(self.document_hashes)
+            }
+            with open(filepath, "wb") as f:
+                pickle.dump(data, f)
+            logger.info(f"Saved vector store to {filepath}")
+        except Exception as e:
+            logger.error(f"Error saving vector store: {e}")
+            raise
 
     def load(self, filepath: str):
-        with open(filepath, "rb") as f:
-            data = pickle.load(f)
+        """Load vector store from disk"""
+        try:
+            with open(filepath, "rb") as f:
+                data = pickle.load(f)
 
-        self.ids = data["ids"]
-        self.embeddings = [np.array(e, dtype=np.float32) for e in data["embeddings"]]
-        self.documents = data["documents"]
-        self.metadatas = data["metadatas"]
+            self.ids = data["ids"]
+            self.embeddings = [np.array(e, dtype=np.float32) for e in data["embeddings"]]
+            self.documents = data["documents"]
+            self.metadatas = data["metadatas"]
+            self.document_hashes = set(data.get("document_hashes", []))
+            
+            logger.info(f"Loaded vector store from {filepath}")
+        except Exception as e:
+            logger.error(f"Error loading vector store: {e}")
+            raise
 
 
 # =========================
@@ -103,34 +176,65 @@ class DocumentProcessor:
 
     @staticmethod
     def read_txt(path: str) -> str:
-        return Path(path).read_text(encoding="utf-8", errors="ignore")
+        """Read plain text file"""
+        try:
+            return Path(path).read_text(encoding="utf-8", errors="ignore")
+        except Exception as e:
+            logger.error(f"Error reading TXT file {path}: {e}")
+            raise
 
     @staticmethod
     def read_pdf(path: str) -> str:
-        text = ""
-        with open(path, "rb") as f:
-            reader = PyPDF2.PdfReader(f)
-            for page in reader.pages:
-                text += (page.extract_text() or "") + "\n"
-        return text
+        """Extract text from PDF"""
+        try:
+            text = ""
+            with open(path, "rb") as f:
+                reader = PyPDF2.PdfReader(f)
+                for page_num, page in enumerate(reader.pages):
+                    page_text = page.extract_text() or ""
+                    text += page_text + "\n"
+            return text
+        except Exception as e:
+            logger.error(f"Error reading PDF file {path}: {e}")
+            raise
 
     @staticmethod
     def read_docx(path: str) -> str:
-        doc = Document(path)
-        return "\n".join(p.text for p in doc.paragraphs)
+        """Extract text from DOCX"""
+        try:
+            doc = Document(path)
+            text = "\n".join(p.text for p in doc.paragraphs if p.text.strip())
+            return text
+        except Exception as e:
+            logger.error(f"Error reading DOCX file {path}: {e}")
+            raise
 
     @staticmethod
     def read_excel(path: str) -> str:
-        df = pd.read_excel(path)
-        return df.to_string()
+        """Convert Excel to text"""
+        try:
+            df = pd.read_excel(path)
+            return df.to_string(index=False)
+        except Exception as e:
+            logger.error(f"Error reading Excel file {path}: {e}")
+            raise
 
     @staticmethod
     def read_csv(path: str) -> str:
-        df = pd.read_csv(path)
-        return df.to_string()
+        """Convert CSV to text"""
+        try:
+            df = pd.read_csv(path, encoding="utf-8", errors="ignore")
+            return df.to_string(index=False)
+        except Exception as e:
+            logger.error(f"Error reading CSV file {path}: {e}")
+            raise
 
     @classmethod
     def process(cls, path: str) -> str:
+        """Process document and extract text"""
+        if not Path(path).exists():
+            raise FileNotFoundError(f"File not found: {path}")
+        
         ext = Path(path).suffix.lower()
 
         handlers = {
@@ -146,6 +250,7 @@ class DocumentProcessor:
         if ext not in handlers:
             raise ValueError(f"Unsupported file type: {ext}")
 
+        logger.info(f"Processing {ext} file: {path}")
         return handlers[ext](path)
 
 
@@ -154,7 +259,7 @@ class DocumentProcessor:
 # =========================
 
 class RAGChatbot:
-    """Offline RAG-powered chatbot using Ollama"""
+    """Enhanced RAG chatbot with error handling and features"""
 
     def __init__(
         self,
@@ -165,6 +270,14 @@ class RAGChatbot:
         self.embedding_model = embedding_model
         self.vector_store = SimpleVectorStore()
         self.processor = DocumentProcessor()
+        
+        # Verify Ollama connection
+        try:
+            ollama.list()
+            logger.info("Connected to Ollama successfully")
+        except Exception as e:
+            logger.error(f"Failed to connect to Ollama: {e}")
+            raise
 
     @staticmethod
     def chunk_text(
@@ -172,6 +285,10 @@ class RAGChatbot:
         chunk_size: int = 500,
         overlap: int = 50
     ) -> List[str]:
+        """Split text into overlapping chunks"""
+        if not text.strip():
+            return []
+        
         words = text.split()
         chunks = []
 
@@ -180,30 +297,87 @@ class RAGChatbot:
             if chunk.strip():
                 chunks.append(chunk)
 
+        logger.debug(f"Created {len(chunks)} chunks from text")
         return chunks
 
-    def add_document(self, file_path: str, metadata: Dict = None) -> bool:
-        text = self.processor.process(file_path)
-        chunks = self.chunk_text(text)
+    def add_document(
+        self,
+        file_path: str,
+        metadata: Optional[Dict] = None
+    ) -> Tuple[bool, int]:
+        """Add document to knowledge base"""
+        try:
+            # Process document
+            text = self.processor.process(file_path)
+            
+            if not text.strip():
+                logger.warning(f"No text extracted from {file_path}")
+                return False, 0
+            
+            # Create chunks
+            chunks = self.chunk_text(text)
+            
+            if not chunks:
+                logger.warning(f"No chunks created from {file_path}")
+                return False, 0
+            
+            # Generate embeddings and add to vector store
+            filename = Path(file_path).name
+            
+            for i, chunk in enumerate(chunks):
+                try:
+                    # Get embedding from Ollama
+                    emb_response = ollama.embeddings(
+                        model=self.embedding_model,
+                        prompt=chunk
+                    )
+                    
+                    embedding = emb_response["embedding"]
+                    
+                    # Prepare metadata
+                    chunk_metadata = {
+                        "source": file_path,
+                        "filename": filename,
+                        "chunk": i,
+                        "upload_date": datetime.now().isoformat(),
+                        **(metadata or {})
+                    }
+                    
+                    # Add to vector store
+                    self.vector_store.add(
+                        ids=[f"{Path(file_path).stem}_{i}"],
+                        embeddings=[embedding],
+                        documents=[chunk],
+                        metadatas=[chunk_metadata]
+                    )
+                    
+                except Exception as e:
+                    logger.error(f"Error processing chunk {i} of {file_path}: {e}")
+                    continue
+            
+            logger.info(f"Added {len(chunks)} chunks from {file_path}")
+            return True, len(chunks)
+            
+        except Exception as e:
+            logger.error(f"Error adding document {file_path}: {e}")
+            return False, 0
 
-        for i, chunk in enumerate(chunks):
-            emb = ollama.embeddings(
-                model=self.embedding_model,
-                prompt=chunk
-            )["embedding"]
-
-            self.vector_store.add(
-                ids=[f"{Path(file_path).stem}_{i}"],
-                embeddings=[emb],
-                documents=[chunk],
-                metadatas=[{
-                    "source": file_path,
-                    "chunk": i,
-                    **(metadata or {})
-                }]
-            )
-
-        return True
+    def delete_document(self, filename: str) -> int:
+        """Delete all chunks from a document"""
+        # Find matching source paths
+        sources = [meta["source"] for meta in self.vector_store.metadatas 
+                   if Path(meta["source"]).name == filename]
+        
+        if not sources:
+            logger.warning(f"No document found with filename: {filename}")
+            return 0
+        
+        total_removed = 0
+        for source in set(sources):
+            removed = self.vector_store.delete_by_source(source)
+            total_removed += removed
+        
+        return total_removed
 
     def retrieve_context(
         self,
@@ -211,92 +385,135 @@ class RAGChatbot:
         n_results: int = 3,
         min_similarity: float = 0.3
     ) -> Tuple[str, List[str]]:
+        """Retrieve relevant context for query"""
+        try:
+            # Get query embedding
+            query_emb_response = ollama.embeddings(
+                model=self.embedding_model,
+                prompt=query
+            )
+            query_emb = query_emb_response["embedding"]
+            
+            # Query vector store
+            results = self.vector_store.query(query_emb, n_results)
+            
+            docs, sources = [], []
+            
+            for doc, meta, dist in zip(
+                results["documents"][0],
+                results["metadatas"][0],
+                results["distances"][0]
+            ):
+                similarity = 1 - dist
+                if similarity >= min_similarity:
+                    docs.append(doc)
+                    sources.append(meta.get("filename", meta.get("source", "Unknown")))
+            
+            context = "\n\n".join(docs)
+            unique_sources = list(set(sources))
+            
+            logger.debug(f"Retrieved {len(docs)} relevant chunks from {len(unique_sources)} sources")
+            return context, unique_sources
+            
+        except Exception as e:
+            logger.error(f"Error retrieving context: {e}")
+            return "", []
 
-        query_emb = ollama.embeddings(
-            model=self.embedding_model,
-            prompt=query
-        )["embedding"]
+    def chat(
+        self,
+        message: str,
+        use_rag: bool = True,
+        top_k: int = 3
+    ) -> Dict:
+        """Generate response to user message"""
+        try:
+            context = ""
+            sources = []
 
-        results = self.vector_store.query(query_emb, n_results)
+            if use_rag and len(self.vector_store.documents) > 0:
+                context, sources = self.retrieve_context(message, n_results=top_k)
 
-        docs, sources = [], []
+            # Prepare messages
+            if context:
+                messages = [
+                    {
+                        "role": "system",
+                        "content": f"""You are a helpful AI assistant. Use the following context to answer the user's question accurately.
 
-        for doc, meta, dist in zip(
-            results["documents"][0],
-            results["metadatas"][0],
-            results["distances"][0]
-        ):
-            similarity = 1 - dist
-            if similarity >= min_similarity:
-                docs.append(doc)
-                sources.append(meta["source"])
-
-        return "\n\n".join(docs), list(set(sources))
-
-    def chat(self, message: str, use_rag: bool = True):
-        context = ""
-        sources = []
-
-        if use_rag:
-            context, sources = self.retrieve_context(message)
-
-        if context:
-            messages = [
-            {
-                "role": "system",
-                "content": f"""
-You are a helpful assistant.
-Use the following context to answer the user's question.
-If the context is not relevant, say so.
+If the context doesn't contain relevant information, politely say so and provide a general response if possible.
 
 Context:
 {context}
 """
-            },
-            {"role": "user", "content": message}
-        ]
-        else:
-            messages = [{"role": "user", "content": message}]
+                    },
+                    {"role": "user", "content": message}
+                ]
+            else:
+                messages = [
+                    {
+                        "role": "system",
+                        "content": "You are a helpful AI assistant. Answer the user's question to the best of your ability."
+                    },
+                    {"role": "user", "content": message}
+                ]
 
-        response = ollama.chat(
-            model=self.model,
-            messages=messages
-    )
+            # Get response from Ollama
+            response = ollama.chat(
+                model=self.model,
+                messages=messages
+            )
 
-        answer = response["message"]["content"]
+            answer = response["message"]["content"]
 
-        return {
-            "answer": answer,
-            "sources": list(set(sources))
-       }
-
+            return {
+                "answer": answer,
+                "sources": sources,
+                "context_used": bool(context)
+            }
+            
+        except Exception as e:
+            logger.error(f"Error in chat: {e}")
+            return {
+                "answer": f"Sorry, I encountered an error: {str(e)}",
+                "sources": [],
+                "context_used": False
+            }
 
     # ===== Persistence =====
 
     def save_knowledge_base(self, path: str):
-        self.vector_store.save(path)
+        """Save knowledge base to disk"""
+        try:
+            self.vector_store.save(path)
+        except Exception as e:
+            logger.error(f"Error saving knowledge base: {e}")
+            raise
 
     def load_knowledge_base(self, path: str):
-        if Path(path).exists():
-            self.vector_store.load(path)
+        """Load knowledge base from disk"""
+        try:
+            if Path(path).exists():
+                self.vector_store.load(path)
+            else:
+                logger.warning(f"Knowledge base file not found: {path}")
+        except Exception as e:
+            logger.error(f"Error loading knowledge base: {e}")
+            raise
 
     def clear_knowledge_base(self):
+        """Clear all documents from knowledge base"""
         self.vector_store.clear()
+        logger.info("Knowledge base cleared")
 
-    def compress_context(self, context: str, question: str) -> str:
-        prompt = f"""
-You are an assistant that extracts only the most relevant information.
-
-Context:
-{context}
-
-Question:
-{question}
-
-Extract ONLY the information relevant to answering the question.
-"""
-        response = ollama.chat(
-            model=self.model,
-            messages=[{"role": "user", "content": prompt}]
-        )
-        return response["message"]["content"]
+    def get_stats(self) -> Dict:
+        """Get statistics about the knowledge base"""
+        documents = {}
+        for meta in self.vector_store.metadatas:
+            filename = meta.get("filename", "Unknown")
+            documents[filename] = documents.get(filename, 0) + 1
+        
+        return {
+            "total_chunks": len(self.vector_store.documents),
+            "total_documents": len(documents),
+            "documents": documents
+        }
