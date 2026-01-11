@@ -1,6 +1,9 @@
 from pydantic import BaseModel, Field, validator
 from typing import List, Optional, Dict
 from datetime import datetime
+from pydantic import BaseModel, Field
+from typing import List, Optional
+from datetime import datetime
 
 # ============ Request Schemas ============
 
@@ -27,7 +30,32 @@ class ChatResponse(BaseModel):
     sources: List[str]
     context_used: bool = True
     timestamp: datetime = Field(default_factory=datetime.now)
+class MessageModel(BaseModel):
+    role: str = Field(..., pattern="^(user|assistant)$")
+    text: str
+    sources: List[str] = []
+    context_used: Optional[bool] = None
+    timestamp: str
 
+class ChatSessionModel(BaseModel):
+    id: str
+    title: str
+    messages: List[MessageModel]
+    created_at: datetime
+    updated_at: datetime
+
+class SaveChatRequest(BaseModel):
+    session: ChatSessionModel
+
+class LoadChatRequest(BaseModel):
+    session_id: str
+
+class ListChatsResponse(BaseModel):
+    sessions: List[ChatSessionModel]
+    total: int
+
+class DeleteChatRequest(BaseModel):
+    session_id: str
 class DocumentResponse(BaseModel):
     id: str
     filename: str

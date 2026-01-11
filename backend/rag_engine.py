@@ -213,7 +213,18 @@ class DocumentProcessor:
     def read_excel(path: str) -> str:
         """Convert Excel to text"""
         try:
-            df = pd.read_excel(path)
+            # Try reading with openpyxl (for .xlsx)
+            try:
+                df = pd.read_excel(path, engine='openpyxl')
+            except ImportError:
+                # Try xlrd for older .xls files
+                try:
+                    df = pd.read_excel(path, engine='xlrd')
+                except ImportError:
+                    raise ImportError(
+                        "Missing Excel dependencies. Install with: "
+                        "pip install openpyxl xlrd"
+                    )
             return df.to_string(index=False)
         except Exception as e:
             logger.error(f"Error reading Excel file {path}: {e}")
@@ -223,7 +234,12 @@ class DocumentProcessor:
     def read_csv(path: str) -> str:
         """Convert CSV to text"""
         try:
-            df = pd.read_csv(path, encoding="utf-8", errors="ignore")
+            # Try UTF-8 first
+            try:
+                df = pd.read_csv(path, encoding="utf-8")
+            except UnicodeDecodeError:
+                # Fallback to latin-1 if UTF-8 fails
+                df = pd.read_csv(path, encoding="latin-1")
             return df.to_string(index=False)
         except Exception as e:
             logger.error(f"Error reading CSV file {path}: {e}")

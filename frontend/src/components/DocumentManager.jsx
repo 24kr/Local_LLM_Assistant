@@ -1,145 +1,245 @@
-import { useState, useRef } from "react";
-import { addDocument } from "../services/api";
+import { useState, useRef, useEffect } from "react";
+import { listDocuments, deleteDocument, uploadDocument } from "../services/api";
 
 export default function DocumentManager() {
-    const [path, setPath] = useState("");
-    const [file, setFile] = useState(null);
+    const [documents, setDocuments] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [uploading, setUploading] = useState(false);
     const [status, setStatus] = useState("");
-    const [mode, setMode] = useState("path"); // "path" or "upload"
+    const [error, setError] = useState(null);
+    const [stats, setStats] = useState({ total_documents: 0, total_chunks: 0 });
+    const [selectedFile, setSelectedFile] = useState(null);
     const fileInputRef = useRef(null);
 
-    // Handle adding document by path
-    async function handleAddByPath() {
-        if (!path) {
-            setStatus("Please enter a file path");
-            return;
-        }
+    // Load documents on mount
+    useEffect(() => {
+        loadDocuments();
+    }, []);
 
-        setStatus("Processing path...");
+    async function loadDocuments() {
+        setLoading(true);
+        setError(null);
         try {
-            await addDocument(path);
-            setStatus("Document added from path ✅");
-            setPath("");
-        } catch {
-            setStatus("Error adding document ❌");
+            const data = await listDocuments();
+            setDocuments(data.documents || []);
+            setStats({
+                total_documents: data.total_documents || 0,
+                total_chunks: data.total_chunks || 0,
+            });
+        } catch (err) {
+            setError("Failed to load documents");
+            console.error("Load error:", err);
+        } finally {
+            setLoading(false);
         }
     }
 
-    // Handle uploading document by file
     async function handleUpload() {
-        if (!file) {
-            setStatus("Please select a file");
+        if (!selectedFile) {
+            setError("Please select a file");
             return;
         }
 
-        const formData = new FormData();
-        formData.append("file", file);
-
+        setUploading(true);
+        setError(null);
         setStatus("Uploading...");
-        try {
-            const res = await fetch("http://127.0.0.1:8000/upload", {
-                method: "POST",
-                body: formData
-            });
 
-            const data = await res.json();
-            setStatus(`Uploaded: ${data.filename} ✅`);
-            setFile(null);
+        try {
+            const result = await uploadDocument(selectedFile);
+            setStatus(`✅ Uploaded: ${result.filename} (${result.chunks_created} chunks)`);
+            setSelectedFile(null);
             if (fileInputRef.current) {
                 fileInputRef.current.value = "";
             }
-        } catch {
-            setStatus("Upload failed ❌");
+            // Reload documents
+            await loadDocuments();
+            setTimeout(() => setStatus(""), 3000);
+        } catch (err) {
+            setError("Upload failed. Check file size and format.");
+            console.error("Upload error:", err);
+        } finally {
+            setUploading(false);
         }
     }
 
-    // Handle file selection
-    const handleFileSelect = (e) => {
-        const selectedFile = e.target.files[0];
-        if (selectedFile) {
-            setFile(selectedFile);
-            setStatus(`Selected: ${selectedFile.name}`);
-        }
-    };
+    async function handleDelete(filename) {
+        if (!window.confirm(`Delete "${filename}"?`)) return;
 
-    // Main submit handler that calls the appropriate function based on mode
-    const handleSubmit = () => {
-        if (mode === "path") {
-            handleAddByPath();
-        } else {
-            handleUpload();
+        try {
+            await deleteDocument(filename);
+            setStatus(`✅ Deleted: ${filename}`);
+            await loadDocuments();
+            setTimeout(() => setStatus(""), 3000);
+        } catch (err) {
+            setError(`Failed to delete ${filename}`);
+            console.error("Delete error:", err);
         }
-    };
+    }
+
+    function handleFileSelect(e) {
+        const file = e.target.files[0];
+        if (file) {
+            // Check file size (50MB limit)
+            if (file.size > 50 * 1024 * 1024) {
+                setError("File too large! Maximum size is 50MB");
+                return;
+            }
+            setSelectedFile(file);
+            setError(null);
+        }
+    }
+
+    function formatFileSize(bytes) {
+        if (bytes < 1024) return bytes + " B";
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+        return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+    }
 
     return (
-        <div className="docs">
-            <h3>📄 Document Manager</h3>
-
-            {/* Mode selector */}
-            <div className="mode-selector">
+        <div className="document-manager">
+            <div className="manager-header">
+                <h2>📚 Document Library</h2>
                 <button
-                    className={mode === "path" ? "active" : ""}
-                    onClick={() => setMode("path")}
+                    className="btn-secondary btn-sm"
+                    onClick={loadDocuments}
+                    disabled={loading}
+                    title="Refresh"
                 >
-                    Add by Path
-                </button>
-                <button
-                    className={mode === "upload" ? "active" : ""}
-                    onClick={() => setMode("upload")}
-                >
-                    Upload File
+                    🔄 Refresh
                 </button>
             </div>
 
-            {/* Path input mode */}
-            {mode === "path" && (
-                <div className="input-section">
-                    <input
-                        value={path}
-                        onChange={e => setPath(e.target.value)}
-                        placeholder="Local file path (PDF, DOCX, CSV...)"
-                        onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
-                    />
+            {/* Statistics */}
+            <div className="stats-cards">
+                <div className="stat-card">
+                    <div className="stat-icon">📄</div>
+                    <div className="stat-content">
+                        <div className="stat-value">{stats.total_documents}</div>
+                        <div className="stat-label">Documents</div>
+                    </div>
                 </div>
-            )}
+                <div className="stat-card">
+                    <div className="stat-icon">🧩</div>
+                    <div className="stat-content">
+                        <div className="stat-value">{stats.total_chunks}</div>
+                        <div className="stat-label">Chunks</div>
+                    </div>
+                </div>
+            </div>
 
-            {/* File upload mode */}
-            {mode === "upload" && (
-                <div className="input-section">
+            {/* Upload Section */}
+            <div className="upload-section">
+                <h3>Upload New Document</h3>
+                <div className="upload-area">
                     <input
-                        type="file"
                         ref={fileInputRef}
+                        type="file"
                         onChange={handleFileSelect}
-                        accept=".pdf,.docx,.csv,.txt,.md"
+                        accept=".pdf,.docx,.doc,.txt,.csv,.xlsx,.xls"
+                        className="file-input"
+                        id="file-upload"
+                        disabled={uploading}
                     />
-                    {file && (
+                    <label htmlFor="file-upload" className="file-label">
+                        <span className="upload-icon">📎</span>
+                        <span className="upload-text">
+                            {selectedFile ? selectedFile.name : "Choose a file"}
+                        </span>
+                    </label>
+
+                    {selectedFile && (
                         <div className="file-info">
-                            Selected: <strong>{file.name}</strong> ({Math.round(file.size / 1024)} KB)
+                            <span className="file-name">📄 {selectedFile.name}</span>
+                            <span className="file-size">{formatFileSize(selectedFile.size)}</span>
+                            <button
+                                className="btn-clear"
+                                onClick={() => {
+                                    setSelectedFile(null);
+                                    if (fileInputRef.current) fileInputRef.current.value = "";
+                                }}
+                            >
+                                ✕
+                            </button>
                         </div>
                     )}
+
+                    <button
+                        className="btn-primary"
+                        onClick={handleUpload}
+                        disabled={!selectedFile || uploading}
+                    >
+                        {uploading ? "⏳ Uploading..." : "📤 Upload Document"}
+                    </button>
+
+                    <p className="upload-hint">
+                        Supported: PDF, DOCX, TXT, CSV, XLSX (Max 50MB)
+                    </p>
                 </div>
-            )}
+            </div>
 
-            {/* Action button */}
-            <button
-                onClick={handleSubmit}
-                disabled={(mode === "path" && !path) || (mode === "upload" && !file)}
-            >
-                {mode === "path" ? "Add Document" : "Upload Document"}
-            </button>
-
-            {/* Status message */}
+            {/* Status Messages */}
             {status && (
-                <div className={`status ${status.includes("✅") ? "success" : status.includes("❌") ? "error" : ""}`}>
+                <div className="status-message success">
                     {status}
                 </div>
             )}
 
-            {/* Quick help */}
-            <div className="help-text">
-                {mode === "path"
-                    ? "Enter the full path to a document on your system."
-                    : "Select a document file to upload from your computer."}
+            {error && (
+                <div className="status-message error">
+                    <span>⚠️ {error}</span>
+                    <button className="error-close" onClick={() => setError(null)}>✕</button>
+                </div>
+            )}
+
+            {/* Documents List */}
+            <div className="documents-section">
+                <h3>Your Documents</h3>
+
+                {loading ? (
+                    <div className="loading-state">
+                        <div className="spinner"></div>
+                        <p>Loading documents...</p>
+                    </div>
+                ) : documents.length === 0 ? (
+                    <div className="empty-state">
+                        <div className="empty-icon">📭</div>
+                        <h4>No documents yet</h4>
+                        <p>Upload your first document to get started!</p>
+                    </div>
+                ) : (
+                    <div className="documents-list">
+                        {documents.map((doc, i) => (
+                            <div key={i} className="document-card">
+                                <div className="doc-icon">
+                                    {doc.filename.endsWith(".pdf") ? "📕" :
+                                        doc.filename.endsWith(".docx") ? "📘" :
+                                            doc.filename.endsWith(".csv") ? "📊" :
+                                                doc.filename.endsWith(".txt") ? "📄" : "📄"}
+                                </div>
+                                <div className="doc-info">
+                                    <div className="doc-name" title={doc.filename}>
+                                        {doc.filename}
+                                    </div>
+                                    <div className="doc-meta">
+                                        <span className="doc-chunks">🧩 {doc.chunks} chunks</span>
+                                        {doc.upload_date && (
+                                            <span className="doc-date">
+                                                📅 {new Date(doc.upload_date).toLocaleDateString()}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                                <button
+                                    className="btn-delete"
+                                    onClick={() => handleDelete(doc.filename)}
+                                    title="Delete document"
+                                >
+                                    🗑️
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
         </div>
     );

@@ -31,6 +31,40 @@ export async function chat(message, use_rag = true, top_k = 3) {
         body: JSON.stringify({ message, use_rag, top_k }),
     });
 }
+// Chat History Management
+
+export async function saveChatSession(session) {
+    return apiRequest("/chats/save", {
+        method: "POST",
+        body: JSON.stringify(session),
+    });
+}
+
+export async function listChatSessions() {
+    return apiRequest("/chats/list");
+}
+
+export async function loadChatSession(sessionId) {
+    return apiRequest(`/chats/load/${sessionId}`);
+}
+
+export async function deleteChatSession(sessionId) {
+    return apiRequest(`/chats/delete/${sessionId}`, {
+        method: "DELETE",
+    });
+}
+
+export async function clearAllChatSessions() {
+    return apiRequest("/chats/clear", {
+        method: "POST",
+    });
+}
+
+export async function exportChatSession(sessionId) {
+    return apiRequest(`/chats/export/${sessionId}`, {
+        method: "POST",
+    });
+}
 
 // Document Management
 export async function listDocuments() {

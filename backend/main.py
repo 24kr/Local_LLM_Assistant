@@ -12,6 +12,12 @@ from pathlib import Path
 import shutil
 import logging
 from datetime import datetime
+import json
+from pathlib import Path
+from datetime import datetime
+
+CHAT_STORAGE_DIR = Path("storage/chats")
+CHAT_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
 
 # Setup logging
 logging.basicConfig(
@@ -95,6 +101,197 @@ async def root():
             "docs": "/docs"
         }
     }
+# ============ Chats_history Endpoints ============
+
+@app.post("/chats/save")
+async def save_chat_session(session: dict):
+    """Save a chat session to disk"""
+    try:
+        session_id = session.get('id')
+        if not session_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Session ID is required"
+            )
+        
+        # Save to file
+        chat_file = CHAT_STORAGE_DIR / f"{session_id}.json"
+        with open(chat_file, 'w', encoding='utf-8') as f:
+            json.dump(session, f, indent=2)
+        
+        logger.info(f"Saved chat session: {session_id}")
+        
+        return {
+            "status": "success",
+            "session_id": session_id,
+            "message": "Chat session saved successfully"
+        }
+    except Exception as e:
+        logger.error(f"Error saving chat session: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+@app.get("/chats/list")
+async def list_chat_sessions():
+    """List all chat sessions"""
+    try:
+        sessions = []
+        
+        for chat_file in CHAT_STORAGE_DIR.glob("*.json"):
+            try:
+                with open(chat_file, 'r', encoding='utf-8') as f:
+                    session = json.load(f)
+                    sessions.append(session)
+            except Exception as e:
+                logger.error(f"Error loading chat file {chat_file}: {e}")
+                continue
+        
+        # Sort by updated_at (most recent first)
+        sessions.sort(key=lambda x: x.get('updatedAt', ''), reverse=True)
+        
+        return {
+            "sessions": sessions,
+            "total": len(sessions)
+        }
+    except Exception as e:
+        logger.error(f"Error listing chat sessions: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+@app.get("/chats/load/{session_id}")
+async def load_chat_session(session_id: str):
+    """Load a specific chat session"""
+    try:
+        chat_file = CHAT_STORAGE_DIR / f"{session_id}.json"
+        
+        if not chat_file.exists():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Chat session not found: {session_id}"
+            )
+        
+        with open(chat_file, 'r', encoding='utf-8') as f:
+            session = json.load(f)
+        
+        return session
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error loading chat session: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+@app.delete("/chats/delete/{session_id}")
+async def delete_chat_session(session_id: str):
+    """Delete a chat session"""
+    try:
+        chat_file = CHAT_STORAGE_DIR / f"{session_id}.json"
+        
+        if not chat_file.exists():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Chat session not found: {session_id}"
+            )
+        
+        chat_file.unlink()
+        logger.info(f"Deleted chat session: {session_id}")
+        
+        return {
+            "status": "success",
+            "session_id": session_id,
+            "message": "Chat session deleted successfully"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting chat session: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+@app.post("/chats/clear")
+async def clear_all_chat_sessions():
+    """Clear all chat sessions"""
+    try:
+        count = 0
+        for chat_file in CHAT_STORAGE_DIR.glob("*.json"):
+            chat_file.unlink()
+            count += 1
+        
+        logger.info(f"Cleared {count} chat sessions")
+        
+        return {
+            "status": "success",
+            "deleted_count": count,
+            "message": f"Cleared {count} chat sessions"
+        }
+    except Exception as e:
+        logger.error(f"Error clearing chat sessions: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+@app.post("/chats/export/{session_id}")
+async def export_chat_session(session_id: str):
+    """Export a chat session as text"""
+    try:
+        chat_file = CHAT_STORAGE_DIR / f"{session_id}.json"
+        
+        if not chat_file.exists():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Chat session not found: {session_id}"
+            )
+        
+        with open(chat_file, 'r', encoding='utf-8') as f:
+            session = json.load(f)
+        
+        # Convert to text
+        lines = [
+            f"Chat: {session.get('title', 'Untitled')}",
+            f"Created: {session.get('createdAt', 'Unknown')}",
+            f"Messages: {len(session.get('messages', []))}",
+            "",
+            "=" * 50,
+            ""
+        ]
+        
+        for msg in session.get('messages', []):
+            role = msg.get('role', 'unknown').upper()
+            text = msg.get('text', '')
+            timestamp = msg.get('timestamp', '')
+            
+            lines.append(f"{role} ({timestamp}):")
+            lines.append(text)
+            lines.append("")
+            
+            if msg.get('sources'):
+                lines.append(f"Sources: {', '.join(msg['sources'])}")
+                lines.append("")
+        
+        text_content = "\n".join(lines)
+        
+        return {
+            "status": "success",
+            "content": text_content,
+            "filename": f"{session.get('title', 'chat')}_{session_id}.txt"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error exporting chat session: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
 
 # ============ Chat Endpoints ============
 
