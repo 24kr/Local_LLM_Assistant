@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 # Initialize FastAPI app
 app = FastAPI(
     title=settings.APP_NAME,
-    description="RAG-powered chatbot with document processing",
+    description="Local LLM APP with document processing",
     version="1.0.0"
 )
 
@@ -91,7 +91,7 @@ async def health_check():
 async def root():
     """Root endpoint"""
     return {
-        "message": "RAG Chatbot API",
+        "message": "Local LLM API",
         "version": "1.0.0",
         "endpoints": {
             "health": "/health",

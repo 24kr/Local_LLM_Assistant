@@ -4,7 +4,7 @@ from typing import List
 
 class Settings(BaseSettings):
     # App Settings
-    APP_NAME: str = "RAG Chatbot"
+    APP_NAME: str = "Local LLM Application"
     DEBUG: bool = False
     
     # Server Settings

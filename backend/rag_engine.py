@@ -80,7 +80,7 @@ class SimpleVectorStore:
             }
 
         query_vec = np.array(query_embedding, dtype=np.float32)
-
+        # Calculate similarity with every stored embedding
         similarities = [
             self.cosine_similarity(query_vec, emb)
             for emb in self.embeddings
