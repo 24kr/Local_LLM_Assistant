@@ -19,13 +19,13 @@ export default function StatusBar({ apiStatus }) {
             <div className="status-left">
                 <div className={`status-indicator ${status.color}`}>
                     <span className="status-icon">{status.icon}</span>
-                    <span className="status-text">API: {status.text}</span>
+                    <span className="status-text">Server: {status.text}</span>
                 </div>
             </div>
 
             <div className="status-center">
                 <span className="status-info">
-                    RAG Assistant v1.0.0
+                    Local LLM Assistant v1.0.24
                 </span>
             </div>
 
