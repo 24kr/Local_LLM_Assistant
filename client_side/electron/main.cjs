@@ -51,8 +51,8 @@ function createWindow() {
 // Start Python FastAPI backend
 function startBackend() {
     const backendPath = isDev
-        ? path.join(__dirname, '../../backend')
-        : path.join(process.resourcesPath, 'backend');
+        ? path.join(__dirname, '../../server_side')
+        : path.join(process.resourcesPath, 'server_side');
 
     console.log('Starting backend from:', backendPath);
 
