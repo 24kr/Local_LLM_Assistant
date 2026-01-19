@@ -4,7 +4,7 @@ from typing import List
 
 class Settings(BaseSettings):
     # App Settings
-    APP_NAME: str = "Local LLM Application"
+    APP_NAME: str = "Local LLM Assistant"
     DEBUG: bool = False
     
     # Server Settings
