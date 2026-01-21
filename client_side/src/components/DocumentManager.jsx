@@ -42,7 +42,7 @@ export default function DocumentManager() {
 
         setUploading(true);
         setError(null);
-        setStatus("Uploading...");
+        setStatus("Uploading and processing...");
 
         try {
             const result = await uploadDocument(selectedFile);
@@ -53,7 +53,7 @@ export default function DocumentManager() {
             }
             // Reload documents
             await loadDocuments();
-            setTimeout(() => setStatus(""), 3000);
+            setTimeout(() => setStatus(""), 5000);
         } catch (err) {
             setError("Upload failed. Check file size and format.");
             console.error("Upload error:", err);
@@ -93,6 +93,35 @@ export default function DocumentManager() {
         if (bytes < 1024) return bytes + " B";
         if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
         return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+    }
+
+    function getFileIcon(filename) {
+        const ext = filename.split('.').pop().toLowerCase();
+        
+        // Images
+        if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'ico', 'webp', 'bmp', 'tif', 'tiff'].includes(ext)) {
+            return "🖼️";
+        }
+        // Documents
+        if (['pdf'].includes(ext)) return "📕";
+        if (['docx', 'doc'].includes(ext)) return "📘";
+        if (['xlsx', 'xls', 'csv'].includes(ext)) return "📊";
+        if (['txt', 'md'].includes(ext)) return "📄";
+        // Code files
+        if (['html', 'css'].includes(ext)) return "🌐";
+        if (['js', 'jsx', 'ts', 'tsx', 'json'].includes(ext)) return "⚙️";
+        if (['py'].includes(ext)) return "🐍";
+        if (['java'].includes(ext)) return "☕";
+        if (['cpp', 'c', 'h'].includes(ext)) return "⚡";
+        if (['php'].includes(ext)) return "🐘";
+        if (['rb'].includes(ext)) return "💎";
+        if (['go'].includes(ext)) return "🔷";
+        if (['rs'].includes(ext)) return "🦀";
+        if (['sh', 'bat'].includes(ext)) return "🖥️";
+        if (['yaml', 'yml', 'xml', 'env'].includes(ext)) return "⚙️";
+        if (['sql'].includes(ext)) return "🗄️";
+        
+        return "📄";
     }
 
     return (
@@ -135,7 +164,7 @@ export default function DocumentManager() {
                         ref={fileInputRef}
                         type="file"
                         onChange={handleFileSelect}
-                        accept=".pdf,.docx,.doc,.txt,.csv,.xlsx,.xls"
+                        accept=".pdf,.docx,.doc,.txt,.csv,.xlsx,.xls,.png,.jpg,.jpeg,.svg,.ico,.gif,.tif,.tiff,.webp,.bmp,.html,.css,.js,.jsx,.json,.cpp,.py,.ts,.tsx,.md,.env,.bat,.sh,.php,.cs,.rb,.java,.go,.rs,.yaml,.yml,.xml,.sql,.c,.h"
                         className="file-input"
                         id="file-upload"
                         disabled={uploading}
@@ -149,7 +178,7 @@ export default function DocumentManager() {
 
                     {selectedFile && (
                         <div className="file-info">
-                            <span className="file-name">📄 {selectedFile.name}</span>
+                            <span className="file-name">{getFileIcon(selectedFile.name)} {selectedFile.name}</span>
                             <span className="file-size">{formatFileSize(selectedFile.size)}</span>
                             <button
                                 className="btn-clear"
@@ -168,11 +197,15 @@ export default function DocumentManager() {
                         onClick={handleUpload}
                         disabled={!selectedFile || uploading}
                     >
-                        {uploading ? "⏳ Uploading..." : "📤 Upload Document"}
+                        {uploading ? "⏳ Processing..." : "📤 Upload Document"}
                     </button>
 
                     <p className="upload-hint">
-                        Supported: PDF, DOCX, TXT, CSV, XLSX (Max 50MB)
+                        <strong>Supported formats:</strong><br/>
+                        📄 Documents: PDF, DOCX, TXT, CSV, XLSX<br/>
+                        🖼️ Images: PNG, JPG, SVG, GIF, WebP<br/>
+                        💻 Code: JS, PY, HTML, CSS, JSON, MD, etc.<br/>
+                        <em>Max size: 50MB</em>
                     </p>
                 </div>
             </div>
@@ -202,7 +235,7 @@ export default function DocumentManager() {
                     </div>
                 ) : documents.length === 0 ? (
                     <div className="empty-state">
-                        <div className="empty-icon">📭</div>
+                        <div className="empty-icon">🔭</div>
                         <h4>No documents yet</h4>
                         <p>Upload your first document to get started!</p>
                     </div>
@@ -211,10 +244,7 @@ export default function DocumentManager() {
                         {documents.map((doc, i) => (
                             <div key={i} className="document-card">
                                 <div className="doc-icon">
-                                    {doc.filename.endsWith(".pdf") ? "📕" :
-                                        doc.filename.endsWith(".docx") ? "📘" :
-                                            doc.filename.endsWith(".csv") ? "📊" :
-                                                doc.filename.endsWith(".txt") ? "📄" : "📄"}
+                                    {getFileIcon(doc.filename)}
                                 </div>
                                 <div className="doc-info">
                                     <div className="doc-name" title={doc.filename}>
