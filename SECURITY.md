@@ -43,7 +43,7 @@ Instead, report vulnerabilities privately via:
    - Fill out the private advisory form
 
 2. **Email**
-   - Send details to: [security@yourdomain.com] or [your-github-email]
+   - Send details to: ericngabombaraga24@gmail.com  
    - Subject line: "[SECURITY] LoLA Vulnerability Report"
    - Include: Description, steps to reproduce, potential impact, and suggested fix if known
 
@@ -138,6 +138,6 @@ npm audit
 For non-security questions about privacy or data handling:
 - Open a regular GitHub issue
 - Start a GitHub Discussion
-- Check our [Privacy Documentation](docs/PRIVACY.md) (if you create one)
+- Check our [Privacy Documentation](PRIVACY.md).
 
 Thank you for helping keep LoLA secure! 🔒
