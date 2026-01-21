@@ -9,6 +9,7 @@ import pickle
 import logging
 from datetime import datetime
 import hashlib
+import base64
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -245,6 +246,57 @@ class DocumentProcessor:
             logger.error(f"Error reading CSV file {path}: {e}")
             raise
 
+    @staticmethod
+    def read_image(path: str) -> str:
+        """Extract text from image using Ollama vision"""
+        try:
+            # Convert image to base64
+            with open(path, "rb") as img_file:
+                img_data = base64.b64encode(img_file.read()).decode('utf-8')
+            
+            logger.info(f"Processing image with vision model: {path}")
+            
+            # Use Ollama's vision API with ministral-3
+            response = ollama.chat(
+                model="ministral-3",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": "Extract and describe all text, objects, and content visible in this image. Be detailed and thorough.",
+                        "images": [img_data]
+                    }
+                ]
+            )
+            
+            extracted_text = response['message']['content']
+            
+            # Add metadata to the extracted text
+            filename = Path(path).name
+            result = f"Image: {filename}\n\nExtracted Content:\n{extracted_text}"
+            
+            logger.info(f"Successfully extracted text from image: {filename}")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error processing image {path}: {e}")
+            # Return filename and error info instead of failing completely
+            return f"Image: {Path(path).name}\n[Error extracting image content: {str(e)}]"
+
+    @staticmethod
+    def read_code(path: str) -> str:
+        """Read programming/code files"""
+        try:
+            content = Path(path).read_text(encoding="utf-8", errors="ignore")
+            filename = Path(path).name
+            ext = Path(path).suffix
+            
+            # Add metadata header
+            header = f"File: {filename}\nType: {ext} file\n\n"
+            return header + content
+        except Exception as e:
+            logger.error(f"Error reading code file {path}: {e}")
+            raise
+
     @classmethod
     def process(cls, path: str) -> str:
         """Process document and extract text"""
@@ -252,6 +304,16 @@ class DocumentProcessor:
             raise FileNotFoundError(f"File not found: {path}")
         
         ext = Path(path).suffix.lower()
+
+        # Image extensions
+        image_exts = {".png", ".jpg", ".jpeg", ".svg", ".ico", ".gif", ".tif", ".tiff", ".webp", ".bmp"}
+        
+        # Code/text extensions
+        code_exts = {
+            ".html", ".css", ".js", ".jsx", ".json", ".cpp", ".py", ".ts", ".tsx",
+            ".md", ".env", ".bat", ".sh", ".php", ".cs", ".rb", ".java", ".go",
+            ".rs", ".yaml", ".yml", ".xml", ".sql", ".c", ".h"
+        }
 
         handlers = {
             ".txt": cls.read_txt,
@@ -262,6 +324,14 @@ class DocumentProcessor:
             ".xls": cls.read_excel,
             ".csv": cls.read_csv
         }
+        
+        # Add image handler for all image types
+        for img_ext in image_exts:
+            handlers[img_ext] = cls.read_image
+        
+        # Add code handler for all code types
+        for code_ext in code_exts:
+            handlers[code_ext] = cls.read_code
 
         if ext not in handlers:
             raise ValueError(f"Unsupported file type: {ext}")
@@ -356,6 +426,7 @@ class RAGChatbot:
                         "filename": filename,
                         "chunk": i,
                         "upload_date": datetime.now().isoformat(),
+                        "file_type": Path(file_path).suffix,
                         **(metadata or {})
                     }
                     

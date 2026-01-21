@@ -30,8 +30,18 @@ class Settings(BaseSettings):
     # File Upload Settings
     MAX_FILE_SIZE_MB: int = 50
     ALLOWED_EXTENSIONS: List[str] = [
+        # Documents
         ".txt", ".pdf", ".docx", ".doc", 
-        ".xlsx", ".xls", ".csv"
+        ".xlsx", ".xls", ".csv",
+        # Images
+        ".png", ".jpg", ".jpeg", ".svg", ".ico", 
+        ".gif", ".tif", ".tiff", ".webp", ".bmp",
+        # Programming Files
+        ".html", ".css", ".js", ".jsx", ".json",
+        ".cpp", ".py", ".ts", ".tsx", ".md",
+        ".env", ".bat", ".sh", ".php", ".cs", 
+        ".rb", ".java", ".go", ".rs", ".yaml", 
+        ".yml", ".xml", ".sql", ".c", ".h"
     ]
     
     # Storage Paths
