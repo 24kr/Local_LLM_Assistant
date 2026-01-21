@@ -44,7 +44,7 @@
   },
   "build": {
     "appId": "com.ragassistant.app",
-    "productName": "RAG Assistant",
+    "productName": "Local LLM Assistant",
     "copyright": "Copyright © 2024",
     "directories": {
       "output": "release",
@@ -108,7 +108,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "RAG Assistant",
+      "shortcutName": "LoLA",
       "installerIcon": "build/icon.ico",
       "uninstallerIcon": "build/icon.ico"
     },
