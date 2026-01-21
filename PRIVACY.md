@@ -259,7 +259,7 @@ LoLA does not knowingly collect data from anyone, including children under 13. S
 ### Open Source Verification
 
 LoLA is fully open source under Apache 2.0:
-- **GitHub**: [github.com/yourusername/LoLA](https://github.com/yourusername/LoLA)
+- **GitHub**: https://github.com/24kr/Local_LLM_Assistant.git
 - **Audit the Code**: Every line is public
 - **Build from Source**: Compile it yourself to verify
 - **Community Review**: Welcomed and encouraged
@@ -284,9 +284,9 @@ Since LoLA is a local application that doesn't collect data, this policy is unli
 ### Privacy Questions
 
 For questions about privacy or data handling:
-- **GitHub Issues**: [Open an issue](https://github.com/yourusername/LoLA/issues)
-- **GitHub Discussions**: [Start a discussion](https://github.com/yourusername/LoLA/discussions)
-- **Email**: [your-email@example.com]
+- **GitHub Issues**: [Open an issue](https://github.com/24kr/Local_LLM_Assistant/issues)
+- **GitHub Discussions**: [Start a discussion](https://github.com/24kr/Local_LLM_Assistant/discussions)
+- **Email**: [ericngabombaraga24@gmail.com]
 
 ### Security Concerns
 
