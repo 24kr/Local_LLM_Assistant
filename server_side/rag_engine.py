@@ -248,39 +248,28 @@ class DocumentProcessor:
 
     @staticmethod
     def read_image(path: str) -> str:
-        """Extract text from image using Ollama vision"""
+        """Extract text from image using Ollama vision - Lightweight version"""
         try:
-            # Convert image to base64
-            with open(path, "rb") as img_file:
-                img_data = base64.b64encode(img_file.read()).decode('utf-8')
-            
-            logger.info(f"Processing image with vision model: {path}")
-            
-            # Use Ollama's vision API with ministral-3
-            response = ollama.chat(
-                model="ministral-3",
-                messages=[
-                    {
-                        "role": "user",
-                        "content": "Extract and describe all text, objects, and content visible in this image. Be detailed and thorough.",
-                        "images": [img_data]
-                    }
-                ]
-            )
-            
-            extracted_text = response['message']['content']
-            
-            # Add metadata to the extracted text
             filename = Path(path).name
-            result = f"Image: {filename}\n\nExtracted Content:\n{extracted_text}"
+            file_size = Path(path).stat().st_size / (1024 * 1024)  # Size in MB
             
-            logger.info(f"Successfully extracted text from image: {filename}")
+            logger.info(f"Processing image: {filename} ({file_size:.2f} MB)")
+            
+            # For now, just store image metadata and path
+            # Actual vision processing will happen during chat when user asks about it
+            result = f"""Image File: {filename}
+Type: Image
+Size: {file_size:.2f} MB
+Path: {path}
+Description: This is an image file that can be analyzed using vision-capable models (ministral-3, llava).
+To view its contents, ask about this specific image."""
+            
+            logger.info(f"Stored image metadata: {filename}")
             return result
             
         except Exception as e:
             logger.error(f"Error processing image {path}: {e}")
-            # Return filename and error info instead of failing completely
-            return f"Image: {Path(path).name}\n[Error extracting image content: {str(e)}]"
+            return f"Image: {Path(path).name}\n[Error: {str(e)}]"
 
     @staticmethod
     def read_code(path: str) -> str:

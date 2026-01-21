@@ -6,3 +6,4 @@ export { default as Message } from './Message';
 export { default as Sidebar } from './Sidebar';
 export { default as Settings } from './Settings';
 export { default as StatusBar } from './StatusBar';
+export { default as ModelSelector } from './ModelSelector';

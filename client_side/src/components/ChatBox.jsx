@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from "react";
-import { chat } from "../services/api";
+import { chat, getCurrentModel } from "../services/api";
 import Message from "./Message";
 import ChatHistory from "./ChatHistory";
+import ModelSelector from "./ModelSelector";
 
 export default function ChatBox({ useRag }) {
     const [currentChatId, setCurrentChatId] = useState(null);
@@ -9,6 +10,7 @@ export default function ChatBox({ useRag }) {
     const [input, setInput] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [currentModel, setCurrentModel] = useState("ministral-3");
     const messagesEndRef = useRef(null);
     const inputRef = useRef(null);
 
@@ -20,6 +22,9 @@ export default function ChatBox({ useRag }) {
         } else {
             createNewChat();
         }
+
+        // Load current model
+        loadCurrentModel();
     }, []);
 
     // Auto-scroll to bottom when new messages arrive
@@ -38,6 +43,19 @@ export default function ChatBox({ useRag }) {
     useEffect(() => {
         inputRef.current?.focus();
     }, []);
+
+    async function loadCurrentModel() {
+        try {
+            const data = await getCurrentModel();
+            setCurrentModel(data.llm_model);
+        } catch (err) {
+            console.error("Failed to load current model:", err);
+        }
+    }
+
+    function handleModelChange(newModel) {
+        setCurrentModel(newModel);
+    }
 
     function generateChatId() {
         return `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -135,13 +153,14 @@ export default function ChatBox({ useRag }) {
         setError(null);
 
         try {
-            const res = await chat(input, useRag);
+            const res = await chat(input, useRag, 3, currentModel);
 
             const assistantMsg = {
                 role: "assistant",
                 text: res.answer,
                 sources: res.sources || [],
                 contextUsed: res.context_used,
+                modelUsed: res.model_used || currentModel,
                 timestamp: new Date().toISOString(),
             };
 
@@ -171,7 +190,7 @@ export default function ChatBox({ useRag }) {
 
     function exportChat() {
         const chatText = messages
-            .map((m) => `${m.role.toUpperCase()}: ${m.text}`)
+            .map((m) => `${m.role.toUpperCase()}: ${m.text}${m.modelUsed ? ` [Model: ${m.modelUsed}]` : ''}`)
             .join("\n\n");
         const blob = new Blob([chatText], { type: "text/plain" });
         const url = URL.createObjectURL(blob);
@@ -195,6 +214,7 @@ export default function ChatBox({ useRag }) {
                     <h2>💬 Chat</h2>
                 </div>
                 <div className="chat-actions">
+                    <ModelSelector onModelChange={handleModelChange} />
                     <button
                         className="btn-secondary btn-sm"
                         onClick={createNewChat}
@@ -221,6 +241,11 @@ export default function ChatBox({ useRag }) {
                         <div className="empty-icon">💭</div>
                         <h3>Start a Conversation</h3>
                         <p>Ask me anything! {useRag ? "I'll use your documents to help." : "I'm ready to chat."}</p>
+                        <div className="model-info">
+                            <span className="current-model-badge">
+                                🤖 Using: <strong>{currentModel.split(':')[0]}</strong>
+                            </span>
+                        </div>
                         <div className="example-prompts">
                             <p className="example-label">Try asking:</p>
                             {useRag ? (
@@ -297,7 +322,7 @@ export default function ChatBox({ useRag }) {
                 </div>
                 <div className="input-footer">
                     <span className="input-hint">
-                        {useRag ? "🔍 Using RAG mode" : "💭 Direct chat mode"} • Press Enter to send
+                        🤖 {currentModel.split(':')[0]} • {useRag ? "📚 Using RAG mode" : "💭 Direct chat mode"} • Press Enter to send
                     </span>
                 </div>
             </div>

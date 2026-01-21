@@ -1,9 +1,6 @@
 from pydantic import BaseModel, Field, validator
 from typing import List, Optional, Dict
 from datetime import datetime
-from pydantic import BaseModel, Field
-from typing import List, Optional
-from datetime import datetime
 
 # ============ Request Schemas ============
 
@@ -12,6 +9,7 @@ class ChatRequest(BaseModel):
     use_rag: bool = True
     session_id: Optional[str] = None
     top_k: Optional[int] = Field(default=3, ge=1, le=10)
+    model: Optional[str] = None  # Allow per-request model override
     
     @validator('message')
     def validate_message(cls, v):
@@ -23,13 +21,24 @@ class AddDocumentRequest(BaseModel):
     path: str
     metadata: Optional[Dict] = None
 
+class ModelSwitchRequest(BaseModel):
+    model_name: str = Field(..., min_length=1)
+    
+    @validator('model_name')
+    def validate_model_name(cls, v):
+        if not v.strip():
+            raise ValueError('Model name cannot be empty')
+        return v.strip()
+
 # ============ Response Schemas ============
 
 class ChatResponse(BaseModel):
     answer: str
     sources: List[str]
     context_used: bool = True
+    model_used: Optional[str] = None
     timestamp: datetime = Field(default_factory=datetime.now)
+
 class MessageModel(BaseModel):
     role: str = Field(..., pattern="^(user|assistant)$")
     text: str
@@ -56,6 +65,7 @@ class ListChatsResponse(BaseModel):
 
 class DeleteChatRequest(BaseModel):
     session_id: str
+
 class DocumentResponse(BaseModel):
     id: str
     filename: str
@@ -88,6 +98,18 @@ class HealthResponse(BaseModel):
     version: str = "1.0.0"
     models: Dict[str, str]
     vector_store_size: int
+
+class ModelInfo(BaseModel):
+    name: str
+    size: int
+    modified: str
+    digest: str
+    capabilities: List[str] = []
+
+class ModelListResponse(BaseModel):
+    models: List[ModelInfo]
+    current_llm: str
+    current_embedding: str
     
 class DeleteDocumentRequest(BaseModel):
     filename: str

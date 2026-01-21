@@ -25,14 +25,30 @@ async function apiRequest(endpoint, options = {}) {
 }
 
 // Chat API
-export async function chat(message, use_rag = true, top_k = 3) {
+export async function chat(message, use_rag = true, top_k = 3, model = null) {
     return apiRequest("/chat", {
         method: "POST",
-        body: JSON.stringify({ message, use_rag, top_k }),
+        body: JSON.stringify({ message, use_rag, top_k, model }),
     });
 }
-// Chat History Management
 
+// Model Management
+export async function listModels() {
+    return apiRequest("/models/list");
+}
+
+export async function switchModel(modelName) {
+    return apiRequest("/models/switch", {
+        method: "POST",
+        body: JSON.stringify({ model_name: modelName }),
+    });
+}
+
+export async function getCurrentModel() {
+    return apiRequest("/models/current");
+}
+
+// Chat History Management
 export async function saveChatSession(session) {
     return apiRequest("/chats/save", {
         method: "POST",

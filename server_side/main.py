@@ -5,7 +5,8 @@ from rag_engine import RAGChatbot
 from schemas import (
     ChatRequest, ChatResponse, AddDocumentRequest,
     UploadResponse, DocumentListResponse, StatusResponse,
-    ErrorResponse, HealthResponse, DeleteDocumentRequest
+    ErrorResponse, HealthResponse, DeleteDocumentRequest,
+    ModelListResponse, ModelSwitchRequest
 )
 from config import settings
 from pathlib import Path
@@ -15,6 +16,7 @@ from datetime import datetime
 import json
 from pathlib import Path
 from datetime import datetime
+import ollama
 
 CHAT_STORAGE_DIR = Path("storage/chats")
 CHAT_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
@@ -81,8 +83,8 @@ async def health_check():
     return HealthResponse(
         status="healthy",
         models={
-            "llm": settings.LLM_MODEL,
-            "embedding": settings.EMBEDDING_MODEL
+            "llm": chatbot.model,
+            "embedding": chatbot.embedding_model
         },
         vector_store_size=stats["total_chunks"]
     )
@@ -98,9 +100,114 @@ async def root():
             "chat": "/chat",
             "upload": "/upload",
             "documents": "/documents",
+            "models": "/models",
             "docs": "/docs"
         }
     }
+
+# ============ Model Management Endpoints ============
+@app.get("/models/list", response_model=ModelListResponse)
+async def list_models():
+    """List all available Ollama models"""
+    try:
+        models_response = ollama.list()
+        
+        models = []
+        for model_info in models_response.get('models', []):
+            # Get model name - try both 'name' and 'model' fields
+            model_name = model_info.get('name') or model_info.get('model', 'unknown')
+            
+            # Handle modified_at - convert datetime to string if needed
+            modified_at = model_info.get('modified_at', '')
+            if hasattr(modified_at, 'isoformat'):
+                modified_at = modified_at.isoformat()
+            elif not isinstance(modified_at, str):
+                modified_at = str(modified_at)
+            
+            # Parse model details
+            model_data = {
+                "name": model_name,
+                "size": model_info.get('size', 0),
+                "modified": modified_at,
+                "digest": model_info.get('digest', '')[:12] if model_info.get('digest') else 'N/A',
+            }
+            
+            # Determine capabilities based on model name
+            capabilities = []
+            name_lower = model_name.lower()
+            
+            if 'vision' in name_lower or 'llava' in name_lower or 'ministral' in name_lower or 'pixtral' in name_lower:
+                capabilities.append('vision')
+            if 'code' in name_lower or 'coder' in name_lower:
+                capabilities.append('coding')
+            if 'embed' in name_lower:
+                capabilities.append('embedding')
+            
+            # Default to chat if no specific capability
+            if not capabilities:
+                capabilities.append('chat')
+            
+            model_data['capabilities'] = capabilities
+            models.append(model_data)
+        
+        return ModelListResponse(
+            models=models,
+            current_llm=chatbot.model,
+            current_embedding=chatbot.embedding_model
+        )
+        
+    except Exception as e:
+        logger.error(f"Error listing models: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to list models: {str(e)}"
+        )
+
+@app.post("/models/switch", response_model=StatusResponse)
+async def switch_model(req: ModelSwitchRequest):
+    """Switch the active LLM model"""
+    try:
+        # Verify model exists by checking the list
+        models_response = ollama.list()
+        available_models = [
+            m.get('name') or m.get('model', '') 
+            for m in models_response.get('models', [])
+        ]
+        
+        if req.model_name not in available_models:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Model '{req.model_name}' not found. Available: {', '.join(available_models)}"
+            )
+        
+        # Switch model
+        old_model = chatbot.model
+        chatbot.model = req.model_name
+        
+        logger.info(f"Switched model from {old_model} to {req.model_name}")
+        
+        return StatusResponse(
+            status="success",
+            message=f"Switched to {req.model_name}"
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error switching model: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to switch model: {str(e)}"
+        )
+
+@app.get("/models/current")
+async def get_current_model():
+    """Get currently active model"""
+    return {
+        "llm_model": chatbot.model,
+        "embedding_model": chatbot.embedding_model
+    }
+
 # ============ Chats_history Endpoints ============
 
 @app.post("/chats/save")
@@ -303,20 +410,26 @@ async def chat(req: ChatRequest):
     - **message**: User's question or message
     - **use_rag**: Whether to use RAG (retrieve context from documents)
     - **top_k**: Number of relevant chunks to retrieve (1-10)
+    - **model**: Optional - override the current model for this request
     """
     try:
-        logger.info(f"Chat request: {req.message[:50]}... (RAG: {req.use_rag})")
+        logger.info(f"Chat request: {req.message[:50]}... (RAG: {req.use_rag}, Model: {req.model or chatbot.model})")
+        
+        # Use specified model or default
+        model_to_use = req.model or chatbot.model
         
         result = chatbot.chat(
             message=req.message,
             use_rag=req.use_rag,
-            top_k=req.top_k or settings.TOP_K_RESULTS
+            top_k=req.top_k or settings.TOP_K_RESULTS,
+            model_override=model_to_use
         )
         
         return ChatResponse(
             answer=result["answer"],
             sources=result["sources"],
-            context_used=result["context_used"]
+            context_used=result["context_used"],
+            model_used=result.get("model_used", model_to_use)
         )
         
     except Exception as e:
@@ -343,7 +456,7 @@ async def upload_file(file: UploadFile = File(...)):
     """
     Upload a document to the knowledge base
     
-    Supported formats: TXT, PDF, DOCX, DOC, XLSX, XLS, CSV
+    Supported formats: TXT, PDF, DOCX, DOC, XLSX, XLS, CSV, Images, Code files
     Max file size: 50MB
     """
     try:

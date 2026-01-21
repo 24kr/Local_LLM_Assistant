@@ -1,14 +1,16 @@
 import { useState, useEffect } from "react";
-import { getHealth, getStats, saveKnowledgeBase, clearAllDocuments } from "../services/api";
+import { getHealth, getStats, saveKnowledgeBase, clearAllDocuments, listModels } from "../services/api";
 
 export default function Settings({ darkMode, toggleDarkMode, useRag, setUseRag }) {
     const [health, setHealth] = useState(null);
     const [stats, setStats] = useState(null);
+    const [models, setModels] = useState([]);
     const [loading, setLoading] = useState(false);
     const [status, setStatus] = useState("");
 
     useEffect(() => {
         loadHealthAndStats();
+        loadModels();
     }, []);
 
     async function loadHealthAndStats() {
@@ -24,6 +26,15 @@ export default function Settings({ darkMode, toggleDarkMode, useRag, setUseRag }
             console.error("Failed to load settings data:", err);
         } finally {
             setLoading(false);
+        }
+    }
+
+    async function loadModels() {
+        try {
+            const data = await listModels();
+            setModels(data.models || []);
+        } catch (err) {
+            console.error("Failed to load models:", err);
         }
     }
 
@@ -56,6 +67,21 @@ export default function Settings({ darkMode, toggleDarkMode, useRag, setUseRag }
         } catch {
             setStatus("❌ Failed to clear documents");
         }
+    }
+
+    function formatModelSize(bytes) {
+        const gb = bytes / (1024 ** 3);
+        return gb.toFixed(1) + " GB";
+    }
+
+    function getCapabilityBadge(cap) {
+        const badges = {
+            'vision': { icon: '👁️', label: 'Vision', color: 'purple' },
+            'coding': { icon: '💻', label: 'Coding', color: 'blue' },
+            'chat': { icon: '💬', label: 'Chat', color: 'green' },
+            'embedding': { icon: '🔢', label: 'Embedding', color: 'orange' }
+        };
+        return badges[cap] || { icon: '🤖', label: cap, color: 'gray' };
     }
 
     return (
@@ -106,6 +132,45 @@ export default function Settings({ darkMode, toggleDarkMode, useRag, setUseRag }
                 </div>
             </div>
 
+            {/* Models Section */}
+            <div className="settings-section">
+                <h3>🤖 Available Models</h3>
+                {models.length === 0 ? (
+                    <p className="text-secondary">No models loaded. Pull models with: ollama pull &lt;model&gt;</p>
+                ) : (
+                    <div className="models-grid">
+                        {models.map((model) => (
+                            <div key={model.name} className="model-card">
+                                <div className="model-card-header">
+                                    <span className="model-card-name">{model.name.split(':')[0]}</span>
+                                    <span className="model-card-size">{formatModelSize(model.size)}</span>
+                                </div>
+                                <div className="model-card-capabilities">
+                                    {model.capabilities.map((cap) => {
+                                        const badge = getCapabilityBadge(cap);
+                                        return (
+                                            <span key={cap} className={`model-capability-badge ${badge.color}`} title={badge.label}>
+                                                {badge.icon} {badge.label}
+                                            </span>
+                                        );
+                                    })}
+                                </div>
+                                <div className="model-card-footer">
+                                    <span className="model-card-digest">{model.digest}</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+                <button
+                    className="btn-secondary"
+                    onClick={loadModels}
+                    style={{ marginTop: '12px' }}
+                >
+                    🔄 Refresh Models
+                </button>
+            </div>
+
             {/* System Information */}
             <div className="settings-section">
                 <h3>📊 System Status</h3>
@@ -129,12 +194,12 @@ export default function Settings({ darkMode, toggleDarkMode, useRag, setUseRag }
                                     <span className="info-value">{health.version}</span>
                                 </div>
                                 <div className="info-item">
-                                    <span className="info-label">LLM Model</span>
-                                    <span className="info-value">{health.models?.llm || "N/A"}</span>
+                                    <span className="info-label">Current LLM</span>
+                                    <span className="info-value">{health.models?.llm?.split(':')[0] || "N/A"}</span>
                                 </div>
                                 <div className="info-item">
                                     <span className="info-label">Embedding Model</span>
-                                    <span className="info-value">{health.models?.embedding || "N/A"}</span>
+                                    <span className="info-value">{health.models?.embedding?.split(':')[0] || "N/A"}</span>
                                 </div>
                                 <div className="info-item">
                                     <span className="info-label">Vector Store Size</span>
@@ -206,6 +271,7 @@ export default function Settings({ darkMode, toggleDarkMode, useRag, setUseRag }
                         <div className="feature-badge">💾 Offline First</div>
                         <div className="feature-badge">⚡ Fast & Local</div>
                         <div className="feature-badge">📚 Document RAG</div>
+                        <div className="feature-badge">🤖 Model Switching</div>
                     </div>
                     <div className="tech-stack">
                         <p className="tech-label">Powered by:</p>
