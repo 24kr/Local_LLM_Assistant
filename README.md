@@ -1,7 +1,7 @@
 ﻿# LoLA [Local Large Language Model Assistant]
 
 <div align="center">
-**<h1>LoLA</h1>**
+<h1>LoLA</h1>
 Privacy-Focused AI Assistant with Retrieval-Augmented Generation
 
 [Features](#features) -  [Installation](#installation) -  [Usage](#usage) -  [Desktop App](#desktop-app) -  [Documentation](#documentation)
@@ -209,3 +209,4 @@ Apache License 2.0. See [LICENSE](LICENSE). [github](https://github.com/IQAndrea
 Built for privacy-first AI excellence
 
 </div>
+
