@@ -212,13 +212,12 @@ class DocumentProcessor:
 
     @staticmethod
     def read_excel(path: str) -> str:
-        """Convert Excel to text"""
+        """Convert Excel to text with better formatting"""
         try:
             # Try reading with openpyxl (for .xlsx)
             try:
                 df = pd.read_excel(path, engine='openpyxl')
             except ImportError:
-                # Try xlrd for older .xls files
                 try:
                     df = pd.read_excel(path, engine='xlrd')
                 except ImportError:
@@ -226,22 +225,59 @@ class DocumentProcessor:
                         "Missing Excel dependencies. Install with: "
                         "pip install openpyxl xlrd"
                     )
-            return df.to_string(index=False)
+            
+            filename = Path(path).name
+            
+            # Create a more readable representation
+            text_parts = [
+                f"Excel File: {filename}",
+                f"Rows: {len(df)}",
+                f"Columns: {', '.join(df.columns.tolist())}",
+                "",
+                "Data Preview (first 10 rows):",
+                "=" * 60,
+                df.head(10).to_string(index=False),
+                "",
+                "Statistical Summary:",
+                "=" * 60,
+                df.describe().to_string() if len(df) > 0 else "No numeric data"
+            ]
+            
+            return "\n".join(text_parts)
+            
         except Exception as e:
             logger.error(f"Error reading Excel file {path}: {e}")
             raise
 
     @staticmethod
     def read_csv(path: str) -> str:
-        """Convert CSV to text"""
+        """Convert CSV to text with better formatting"""
         try:
             # Try UTF-8 first
             try:
                 df = pd.read_csv(path, encoding="utf-8")
             except UnicodeDecodeError:
-                # Fallback to latin-1 if UTF-8 fails
                 df = pd.read_csv(path, encoding="latin-1")
-            return df.to_string(index=False)
+            
+            filename = Path(path).name
+            
+            # Create a more readable representation
+            text_parts = [
+                f"CSV File: {filename}",
+                f"Rows: {len(df)}",
+                f"Columns: {', '.join(df.columns.tolist())}",
+                "",
+                "Data Preview (first 10 rows):",
+                "=" * 60,
+                df.head(10).to_string(index=False),
+                "",
+                "Statistical Summary:",
+                "=" * 60,
+                df.describe().to_string() if len(df) > 0 else "No numeric data"
+            ]
+            
+            return "\n".join(text_parts)
+            
         except Exception as e:
             logger.error(f"Error reading CSV file {path}: {e}")
             raise
@@ -499,17 +535,62 @@ class RAGChatbot:
         self,
         message: str,
         use_rag: bool = True,
-        top_k: int = 3
+        top_k: int = 3,
+        model_override: Optional[str] = None
     ) -> Dict:
         """Generate response to user message"""
         try:
             context = ""
             sources = []
+            
+            # Use override model if provided, otherwise use default
+            model_to_use = model_override or self.model
 
             if use_rag and len(self.vector_store.documents) > 0:
                 context, sources = self.retrieve_context(message, n_results=top_k)
+                
+                # Check if context contains image references and user is asking about images
+                image_keywords = ['image', 'picture', 'photo', 'whats in', 'what is in', 'describe', 'show']
+                asking_about_image = any(keyword in message.lower() for keyword in image_keywords)
+                
+                if asking_about_image and 'Image File:' in context:
+                    # Extract image path from context
+                    for line in context.split('\n'):
+                        if line.startswith('Path:'):
+                            image_path = line.replace('Path:', '').strip()
+                            
+                            # Check if model supports vision
+                            model_lower = model_to_use.lower()
+                            if any(x in model_lower for x in ['ministral', 'llava', 'vision', 'pixtral']):
+                                try:
+                                    # Load and process image with vision model
+                                    with open(image_path, "rb") as img_file:
+                                        img_data = base64.b64encode(img_file.read()).decode('utf-8')
+                                    
+                                    logger.info(f"Processing image with vision model: {image_path}")
+                                    
+                                    response = ollama.chat(
+                                        model=model_to_use,
+                                        messages=[
+                                            {
+                                                "role": "user",
+                                                "content": message,
+                                                "images": [img_data]
+                                            }
+                                        ]
+                                    )
+                                    
+                                    return {
+                                        "answer": response["message"]["content"],
+                                        "sources": sources,
+                                        "context_used": True,
+                                        "model_used": model_to_use
+                                    }
+                                except Exception as img_error:
+                                    logger.error(f"Error processing image: {img_error}")
+                                    # Fall through to normal chat if image processing fails
 
-            # Prepare messages
+            # Prepare messages for normal chat
             if context:
                 messages = [
                     {
@@ -533,9 +614,10 @@ Context:
                     {"role": "user", "content": message}
                 ]
 
-            # Get response from Ollama
+            # Get response from Ollama with specified model
+            logger.info(f"Using model: {model_to_use}")
             response = ollama.chat(
-                model=self.model,
+                model=model_to_use,
                 messages=messages
             )
 
@@ -544,7 +626,8 @@ Context:
             return {
                 "answer": answer,
                 "sources": sources,
-                "context_used": bool(context)
+                "context_used": bool(context),
+                "model_used": model_to_use
             }
             
         except Exception as e:
@@ -552,7 +635,8 @@ Context:
             return {
                 "answer": f"Sorry, I encountered an error: {str(e)}",
                 "sources": [],
-                "context_used": False
+                "context_used": False,
+                "model_used": model_to_use if 'model_to_use' in locals() else self.model
             }
 
     # ===== Persistence =====
