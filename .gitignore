@@ -5,3 +5,9 @@ uploads/
 __pycache__/
 *.pyc
 .env
+# Ignore OS generated files
+.DS_Store
+.venv/
+env/
+venv/
+.github/
