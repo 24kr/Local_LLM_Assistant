@@ -281,7 +281,7 @@ export default function ChatBox({ useRag }) {
                                     <span></span>
                                     <span></span>
                                 </div>
-                                <p>AI is thinking...</p>
+                                <p>LoLA is thinking...</p>
                             </div>
                         )}
                         <div ref={messagesEndRef} />
