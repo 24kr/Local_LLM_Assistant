@@ -276,12 +276,12 @@ export default function ChatBox({ useRag }) {
                         ))}
                         {loading && (
                             <div className="loading-message">
-                                <div className="typing-indicator">
-                                    <span></span>
-                                    <span></span>
-                                    <span></span>
-                                </div>
-                                <p>LoLA is thinking...</p>
+                                <p>LoLA is thinking </p>
+                                    <div className="typing-indicator">
+                                        <span></span>
+                                        <span></span>
+                                        <span></span>
+                                    </div>
                             </div>
                         )}
                         <div ref={messagesEndRef} />
