@@ -76,21 +76,27 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "portable",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "build/icon.ico",
       "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
       "signAndEditExecutable": false,
-      "signingHashAlgorithms": ["sha256"],
       "verifyUpdateCodeSignature": false
     },
     "mac": {
-      "target": ["dmg", "zip"],
+      "target": [
+        "dmg",
+        "zip"
+      ],
       "icon": "build/icon.icns",
       "category": "public.app-category.productivity",
       "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
@@ -98,7 +104,11 @@
       "gatekeeperAssess": false
     },
     "linux": {
-      "target": ["AppImage", "deb", "rpm"],
+      "target": [
+        "AppImage",
+        "deb",
+        "rpm"
+      ],
       "icon": "build/icon.png",
       "category": "Office",
       "artifactName": "${productName}-${version}-${os}-${arch}.${ext}"
