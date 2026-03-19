@@ -11,8 +11,11 @@ export default function ChatBox({ useRag }) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [currentModel, setCurrentModel] = useState("ministral-3");
+    const [selectedImageBase64, setSelectedImageBase64] = useState(null);
+    const [selectedImageName, setSelectedImageName] = useState("");
     const messagesEndRef = useRef(null);
     const inputRef = useRef(null);
+    const imageInputRef = useRef(null);
 
     // Initialize or load current chat
     useEffect(() => {
@@ -138,12 +141,65 @@ export default function ChatBox({ useRag }) {
         }
     }
 
+    function readFileAsBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+                const result = reader.result;
+                if (typeof result !== "string") {
+                    reject(new Error("Failed to read image"));
+                    return;
+                }
+
+                const base64 = result.includes(",") ? result.split(",")[1] : result;
+                resolve(base64);
+            };
+            reader.onerror = () => reject(new Error("Failed to read image"));
+            reader.readAsDataURL(file);
+        });
+    }
+
+    async function handleImageSelect(e) {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (!file.type.startsWith("image/")) {
+            setError("Please choose an image file.");
+            return;
+        }
+
+        if (file.size > 20 * 1024 * 1024) {
+            setError("Image too large. Maximum size is 20MB for chat attachments.");
+            return;
+        }
+
+        try {
+            const base64 = await readFileAsBase64(file);
+            setSelectedImageBase64(base64);
+            setSelectedImageName(file.name);
+            setError(null);
+        } catch (err) {
+            setError("Failed to read image attachment.");
+            console.error("Image read error:", err);
+        }
+    }
+
+    function clearSelectedImage() {
+        setSelectedImageBase64(null);
+        setSelectedImageName("");
+        if (imageInputRef.current) {
+            imageInputRef.current.value = "";
+        }
+    }
+
     async function send() {
-        if (!input.trim()) return;
+        if (!input.trim() && !selectedImageBase64) return;
+
+        const messageToSend = input.trim() || "Please analyze the attached image.";
 
         const userMsg = {
             role: "user",
-            text: input,
+            text: selectedImageName ? `${messageToSend}\n\n[Attached image: ${selectedImageName}]` : messageToSend,
             timestamp: new Date().toISOString(),
         };
 
@@ -153,7 +209,14 @@ export default function ChatBox({ useRag }) {
         setError(null);
 
         try {
-            const res = await chat(input, useRag, 3, currentModel);
+            const res = await chat(
+                messageToSend,
+                useRag,
+                3,
+                currentModel,
+                selectedImageBase64,
+                selectedImageName || null
+            );
 
             const assistantMsg = {
                 role: "assistant",
@@ -165,6 +228,7 @@ export default function ChatBox({ useRag }) {
             };
 
             setMessages((prev) => [...prev, assistantMsg]);
+            clearSelectedImage();
         } catch (err) {
             setError("Failed to get response. Check if backend is running.");
             console.error("Chat error:", err);
@@ -300,20 +364,52 @@ export default function ChatBox({ useRag }) {
             )}
 
             <div className="input-container">
+                {selectedImageName && (
+                    <div className="image-attachment-preview">
+                        <span>🖼️ Attached: {selectedImageName}</span>
+                        <button
+                            className="btn-clear-attachment"
+                            onClick={clearSelectedImage}
+                            disabled={loading}
+                            title="Remove attachment"
+                        >
+                            ✕
+                        </button>
+                    </div>
+                )}
+
                 <div className="input-wrapper">
+                    <input
+                        ref={imageInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageSelect}
+                        className="image-file-input"
+                        disabled={loading}
+                    />
+                    <button
+                        type="button"
+                        className="attach-button"
+                        onClick={() => imageInputRef.current?.click()}
+                        disabled={loading}
+                        title="Attach image"
+                    >
+                        🖼️
+                    </button>
+
                     <textarea
                         ref={inputRef}
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyPress={handleKeyPress}
-                        placeholder={useRag ? "Ask about your documents..." : "Type your message..."}
+                        placeholder={useRag ? "Ask about your documents or attach an image..." : "Type your message or attach an image..."}
                         rows={1}
                         className="chat-input"
                         disabled={loading}
                     />
                     <button
                         onClick={send}
-                        disabled={!input.trim() || loading}
+                        disabled={(!input.trim() && !selectedImageBase64) || loading}
                         className="send-button"
                         title="Send (Enter)"
                     >

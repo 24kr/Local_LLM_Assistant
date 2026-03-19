@@ -25,10 +25,24 @@ async function apiRequest(endpoint, options = {}) {
 }
 
 // Chat API
-export async function chat(message, use_rag = true, top_k = 3, model = null) {
+export async function chat(
+    message,
+    use_rag = true,
+    top_k = 3,
+    model = null,
+    imageBase64 = null,
+    imageName = null
+) {
     return apiRequest("/chat", {
         method: "POST",
-        body: JSON.stringify({ message, use_rag, top_k, model }),
+        body: JSON.stringify({
+            message,
+            use_rag,
+            top_k,
+            model,
+            image_base64: imageBase64,
+            image_name: imageName,
+        }),
     });
 }
 

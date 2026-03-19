@@ -536,7 +536,9 @@ class RAGChatbot:
         message: str,
         use_rag: bool = True,
         top_k: int = 3,
-        model_override: Optional[str] = None
+        model_override: Optional[str] = None,
+        image_base64: Optional[str] = None,
+        image_name: Optional[str] = None
     ) -> Dict:
         """Generate response to user message"""
         try:
@@ -545,6 +547,53 @@ class RAGChatbot:
             
             # Use override model if provided, otherwise use default
             model_to_use = model_override or self.model
+
+            # Direct image chat path: bypass image retrieval heuristics and send image to model immediately.
+            if image_base64:
+                logger.info(
+                    f"Direct image chat request received: {image_name or 'unnamed image'} (model: {model_to_use})"
+                )
+
+                if use_rag and len(self.vector_store.documents) > 0:
+                    context, sources = self.retrieve_context(message, n_results=top_k)
+
+                prompt = message
+                if context:
+                    prompt = (
+                        "Use the image as the primary source and use the additional text context when relevant.\n\n"
+                        f"Context:\n{context}\n\n"
+                        f"User question: {message}"
+                    )
+
+                try:
+                    response = ollama.chat(
+                        model=model_to_use,
+                        messages=[
+                            {
+                                "role": "user",
+                                "content": prompt,
+                                "images": [image_base64]
+                            }
+                        ]
+                    )
+
+                    return {
+                        "answer": response["message"]["content"],
+                        "sources": sources,
+                        "context_used": bool(context),
+                        "model_used": model_to_use
+                    }
+                except Exception as vision_error:
+                    logger.error(f"Direct image chat failed: {vision_error}")
+                    return {
+                        "answer": (
+                            "I could not process the attached image with the selected model. "
+                            f"Error: {str(vision_error)}"
+                        ),
+                        "sources": sources,
+                        "context_used": bool(context),
+                        "model_used": model_to_use
+                    }
 
             if use_rag and len(self.vector_store.documents) > 0:
                 context, sources = self.retrieve_context(message, n_results=top_k)

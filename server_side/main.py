@@ -411,6 +411,8 @@ async def chat(req: ChatRequest):
     - **use_rag**: Whether to use RAG (retrieve context from documents)
     - **top_k**: Number of relevant chunks to retrieve (1-10)
     - **model**: Optional - override the current model for this request
+    - **image_base64**: Optional - base64 image payload for direct vision chat
+    - **image_name**: Optional - original image filename for logging/display
     """
     try:
         logger.info(f"Chat request: {req.message[:50]}... (RAG: {req.use_rag}, Model: {req.model or chatbot.model})")
@@ -422,7 +424,9 @@ async def chat(req: ChatRequest):
             message=req.message,
             use_rag=req.use_rag,
             top_k=req.top_k or settings.TOP_K_RESULTS,
-            model_override=model_to_use
+            model_override=model_to_use,
+            image_base64=req.image_base64,
+            image_name=req.image_name
         )
         
         return ChatResponse(

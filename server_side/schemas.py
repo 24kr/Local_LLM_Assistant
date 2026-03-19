@@ -10,6 +10,8 @@ class ChatRequest(BaseModel):
     session_id: Optional[str] = None
     top_k: Optional[int] = Field(default=3, ge=1, le=10)
     model: Optional[str] = None  # Allow per-request model override
+    image_base64: Optional[str] = None
+    image_name: Optional[str] = None
     
     @validator('message')
     def validate_message(cls, v):
