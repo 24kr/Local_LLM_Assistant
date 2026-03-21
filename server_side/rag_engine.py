@@ -10,6 +10,8 @@ import logging
 from datetime import datetime
 import hashlib
 import base64
+import re
+import time
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -381,6 +383,8 @@ class RAGChatbot:
         self.embedding_model = embedding_model
         self.vector_store = SimpleVectorStore()
         self.processor = DocumentProcessor()
+        self._attachment_text_cache: Dict[str, Tuple[float, str]] = {}
+        self._attachment_image_cache: Dict[str, Tuple[float, str]] = {}
         
         # Verify Ollama connection
         try:
@@ -427,11 +431,75 @@ class RAGChatbot:
 
         return preferred_model
 
-    def prepare_attachment_content(self, attachment_records: List[Dict]) -> Tuple[str, List[str], List[str]]:
+    def prepare_attachment_content(self, attachment_records: List[Dict], query_message: str) -> Tuple[str, List[str], List[str]]:
         """Prepare text context and image payloads from chat attachments."""
-        text_sections: List[str] = []
+        text_sections: List[Tuple[str, str]] = []
         image_payloads: List[str] = []
         attachment_sources: List[str] = []
+        max_attachment_chars = 12000
+        max_text_attachments = 4
+
+        def tokenize(value: str) -> set:
+            return {token for token in re.findall(r"[a-zA-Z0-9_]+", value.lower()) if len(token) > 2}
+
+        def get_cached_text(record: Dict) -> str:
+            attachment_id = record.get("id", "")
+            file_path = Path(record.get("path", ""))
+            if not attachment_id or not file_path.exists():
+                return ""
+
+            mtime = file_path.stat().st_mtime
+            cached = self._attachment_text_cache.get(attachment_id)
+            if cached and cached[0] == mtime:
+                return cached[1]
+
+            extracted_text = ""
+            try:
+                extracted_text = self.processor.process(str(file_path))
+            except Exception:
+                extracted_text = ""
+
+            if not extracted_text.strip():
+                try:
+                    extracted_text = file_path.read_text(encoding="utf-8", errors="ignore")
+                except Exception:
+                    extracted_text = ""
+
+            if not extracted_text.strip():
+                extracted_text = "[This file type is binary or unreadable as plain text.]"
+
+            excerpt = extracted_text[:6000]
+            if len(extracted_text) > 6000:
+                excerpt += "\n\n[Truncated for chat attachment context]"
+
+            self._attachment_text_cache[attachment_id] = (mtime, excerpt)
+            return excerpt
+
+        def get_cached_image(record: Dict) -> Optional[str]:
+            attachment_id = record.get("id", "")
+            file_path = Path(record.get("path", ""))
+            if not attachment_id or not file_path.exists():
+                return None
+
+            mtime = file_path.stat().st_mtime
+            cached = self._attachment_image_cache.get(attachment_id)
+            if cached and cached[0] == mtime:
+                return cached[1]
+
+            with open(file_path, "rb") as img_file:
+                payload = base64.b64encode(img_file.read()).decode("utf-8")
+
+            self._attachment_image_cache[attachment_id] = (mtime, payload)
+            return payload
+
+        query_tokens = tokenize(query_message)
+        wants_image = any(
+            keyword in query_message.lower()
+            for keyword in ["image", "picture", "photo", "diagram", "screenshot", "figure", "chart"]
+        )
+
+        scored_text_sections: List[Tuple[int, str, str]] = []
+        scored_images: List[Tuple[int, str, str]] = []
 
         for record in attachment_records:
             file_path = record.get("path")
@@ -444,38 +512,46 @@ class RAGChatbot:
             attachment_sources.append(filename)
 
             if file_type == "image":
-                with open(file_path, "rb") as img_file:
-                    image_payloads.append(base64.b64encode(img_file.read()).decode("utf-8"))
+                payload = get_cached_image(record)
+                if not payload:
+                    continue
+
+                file_tokens = tokenize(filename)
+                overlap = len(query_tokens.intersection(file_tokens))
+                image_score = overlap + (5 if wants_image else 0)
+                scored_images.append((image_score, filename, payload))
                 continue
 
-            try:
-                extracted_text = self.processor.process(file_path)
-                if not extracted_text.strip():
-                    # Fallback for files that are technically readable but returned empty from parser.
-                    extracted_text = Path(file_path).read_text(encoding="utf-8", errors="ignore")
-                excerpt = extracted_text[:6000]
-                if len(extracted_text) > 6000:
-                    excerpt += "\n\n[Truncated for chat attachment context]"
-                text_sections.append(f"Attachment: {filename}\n{excerpt}")
-            except Exception as exc:
-                logger.warning(f"Failed to process attachment '{filename}': {exc}")
-                try:
-                    fallback_text = Path(file_path).read_text(encoding="utf-8", errors="ignore")
-                    if fallback_text.strip():
-                        excerpt = fallback_text[:6000]
-                        if len(fallback_text) > 6000:
-                            excerpt += "\n\n[Truncated for chat attachment context]"
-                        text_sections.append(f"Attachment: {filename}\n{excerpt}")
-                    else:
-                        text_sections.append(
-                            f"Attachment: {filename}\n[This file type is binary or unreadable as plain text.]"
-                        )
-                except Exception:
-                    text_sections.append(
-                        f"Attachment: {filename}\n[This file type is binary or unreadable as plain text.]"
-                    )
+            excerpt = get_cached_text(record)
+            content_tokens = tokenize(excerpt[:1500])
+            filename_tokens = tokenize(filename)
+            score = len(query_tokens.intersection(content_tokens)) + (2 * len(query_tokens.intersection(filename_tokens)))
+            scored_text_sections.append((score, filename, excerpt))
 
-        return "\n\n".join(text_sections), image_payloads, attachment_sources
+        if scored_text_sections:
+            scored_text_sections.sort(key=lambda item: item[0], reverse=True)
+            selected_sections = scored_text_sections[:max_text_attachments]
+            total_chars = 0
+            for _, filename, excerpt in selected_sections:
+                section = f"Attachment: {filename}\n{excerpt}"
+                if total_chars + len(section) > max_attachment_chars:
+                    break
+                text_sections.append((filename, section))
+                total_chars += len(section)
+
+        if scored_images:
+            scored_images.sort(key=lambda item: item[0], reverse=True)
+            selected_images = scored_images[:2] if wants_image else [img for img in scored_images if img[0] > 0][:1]
+            image_payloads.extend([payload for _, _, payload in selected_images])
+
+        selected_sources = [filename for filename, _ in text_sections]
+        if wants_image:
+            selected_sources.extend([filename for _, filename, _ in scored_images[:2]])
+
+        if not selected_sources:
+            selected_sources = attachment_sources[:]
+
+        return "\n\n".join(section for _, section in text_sections), image_payloads, selected_sources
 
     @staticmethod
     def chunk_text(
@@ -631,6 +707,7 @@ class RAGChatbot:
     ) -> Dict:
         """Generate response to user message"""
         try:
+            started_at = time.perf_counter()
             context = ""
             sources = []
             attachment_context = ""
@@ -638,15 +715,17 @@ class RAGChatbot:
             
             # Use override model if provided, otherwise use default
             model_to_use = model_override or self.model
-
             if attachment_ids and attachment_lookup is not None:
-                attachment_records = []
-                for attachment_id in attachment_ids:
-                    record = attachment_lookup.get_attachment(attachment_id)
-                    if record:
-                        attachment_records.append(record)
+                if hasattr(attachment_lookup, "get_attachments_by_ids"):
+                    attachment_records = attachment_lookup.get_attachments_by_ids(attachment_ids)
+                else:
+                    attachment_records = []
+                    for attachment_id in attachment_ids:
+                        record = attachment_lookup.get_attachment(attachment_id)
+                        if record:
+                            attachment_records.append(record)
 
-                attachment_context, image_payloads, attachment_sources = self.prepare_attachment_content(attachment_records)
+                attachment_context, image_payloads, attachment_sources = self.prepare_attachment_content(attachment_records, message)
                 sources.extend(attachment_sources)
 
             # Direct image chat path: bypass image retrieval heuristics and send image to model immediately.
@@ -836,6 +915,9 @@ Context:
                 "context_used": False,
                 "model_used": model_to_use if 'model_to_use' in locals() else self.model
             }
+        finally:
+            elapsed = time.perf_counter() - started_at if 'started_at' in locals() else 0.0
+            logger.info(f"Chat request processed in {elapsed:.2f}s")
 
     # ===== Persistence =====
 

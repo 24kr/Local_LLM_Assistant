@@ -151,6 +151,27 @@ class AttachmentStore:
                 return normalized
         return None
 
+    def get_attachments_by_ids(self, attachment_ids: List[str]) -> List[Dict]:
+        """Bulk-resolve attachments by IDs with a single metadata load."""
+        if not attachment_ids:
+            return []
+
+        records = self._load()
+        id_set = set(attachment_ids)
+        index = {record.get("id"): record for record in records if record.get("id") in id_set}
+
+        resolved: List[Dict] = []
+        for attachment_id in attachment_ids:
+            record = index.get(attachment_id)
+            if not record:
+                continue
+
+            normalized = dict(record)
+            normalized["path"] = str(self.resolve_record_path(record))
+            resolved.append(normalized)
+
+        return resolved
+
     def delete_attachment(self, attachment_id: str) -> Optional[Dict]:
         records = self._load()
         remaining = []
