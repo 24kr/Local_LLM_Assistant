@@ -374,8 +374,8 @@ class RAGChatbot:
 
     def __init__(
         self,
-        model: str = "ministral-3",
-        embedding_model: str = "nomic-embed-text"
+        model: str = "qwen3",
+        embedding_model: str = "qwen3-embedding"
     ):
         self.model = model
         self.embedding_model = embedding_model
@@ -389,6 +389,93 @@ class RAGChatbot:
         except Exception as e:
             logger.error(f"Failed to connect to Ollama: {e}")
             raise
+
+    @staticmethod
+    def is_vision_model(model_name: Optional[str]) -> bool:
+        if not model_name:
+            return False
+        model_lower = model_name.lower()
+        return any(token in model_lower for token in ["ministral", "llava", "vision", "pixtral"])
+
+    def select_vision_model(self, preferred_model: str) -> str:
+        if self.is_vision_model(preferred_model):
+            return preferred_model
+
+        try:
+            available_models = [
+                model.get("name") or model.get("model", "")
+                for model in ollama.list().get("models", [])
+            ]
+        except Exception as exc:
+            logger.warning(f"Could not list models for vision selection: {exc}")
+            return preferred_model
+
+        preferred_order = ["ministral", "pixtral", "llava", "vision"]
+        vision_models = [model for model in available_models if self.is_vision_model(model)]
+
+        for token in preferred_order:
+            for model in vision_models:
+                if token in model.lower():
+                    logger.info(f"Auto-switched to vision model: {model}")
+                    self.model = model
+                    return model
+
+        if vision_models:
+            self.model = vision_models[0]
+            logger.info(f"Auto-switched to vision model: {vision_models[0]}")
+            return vision_models[0]
+
+        return preferred_model
+
+    def prepare_attachment_content(self, attachment_records: List[Dict]) -> Tuple[str, List[str], List[str]]:
+        """Prepare text context and image payloads from chat attachments."""
+        text_sections: List[str] = []
+        image_payloads: List[str] = []
+        attachment_sources: List[str] = []
+
+        for record in attachment_records:
+            file_path = record.get("path")
+            filename = record.get("filename", "attachment")
+            file_type = record.get("file_type")
+
+            if not file_path or not Path(file_path).exists():
+                continue
+
+            attachment_sources.append(filename)
+
+            if file_type == "image":
+                with open(file_path, "rb") as img_file:
+                    image_payloads.append(base64.b64encode(img_file.read()).decode("utf-8"))
+                continue
+
+            try:
+                extracted_text = self.processor.process(file_path)
+                if not extracted_text.strip():
+                    # Fallback for files that are technically readable but returned empty from parser.
+                    extracted_text = Path(file_path).read_text(encoding="utf-8", errors="ignore")
+                excerpt = extracted_text[:6000]
+                if len(extracted_text) > 6000:
+                    excerpt += "\n\n[Truncated for chat attachment context]"
+                text_sections.append(f"Attachment: {filename}\n{excerpt}")
+            except Exception as exc:
+                logger.warning(f"Failed to process attachment '{filename}': {exc}")
+                try:
+                    fallback_text = Path(file_path).read_text(encoding="utf-8", errors="ignore")
+                    if fallback_text.strip():
+                        excerpt = fallback_text[:6000]
+                        if len(fallback_text) > 6000:
+                            excerpt += "\n\n[Truncated for chat attachment context]"
+                        text_sections.append(f"Attachment: {filename}\n{excerpt}")
+                    else:
+                        text_sections.append(
+                            f"Attachment: {filename}\n[This file type is binary or unreadable as plain text.]"
+                        )
+                except Exception:
+                    text_sections.append(
+                        f"Attachment: {filename}\n[This file type is binary or unreadable as plain text.]"
+                    )
+
+        return "\n\n".join(text_sections), image_payloads, attachment_sources
 
     @staticmethod
     def chunk_text(
@@ -538,32 +625,54 @@ class RAGChatbot:
         top_k: int = 3,
         model_override: Optional[str] = None,
         image_base64: Optional[str] = None,
-        image_name: Optional[str] = None
+        image_name: Optional[str] = None,
+        attachment_ids: Optional[List[str]] = None,
+        attachment_lookup = None
     ) -> Dict:
         """Generate response to user message"""
         try:
             context = ""
             sources = []
+            attachment_context = ""
+            image_payloads: List[str] = []
             
             # Use override model if provided, otherwise use default
             model_to_use = model_override or self.model
+
+            if attachment_ids and attachment_lookup is not None:
+                attachment_records = []
+                for attachment_id in attachment_ids:
+                    record = attachment_lookup.get_attachment(attachment_id)
+                    if record:
+                        attachment_records.append(record)
+
+                attachment_context, image_payloads, attachment_sources = self.prepare_attachment_content(attachment_records)
+                sources.extend(attachment_sources)
 
             # Direct image chat path: bypass image retrieval heuristics and send image to model immediately.
             if image_base64:
                 logger.info(
                     f"Direct image chat request received: {image_name or 'unnamed image'} (model: {model_to_use})"
                 )
+                image_payloads.insert(0, image_base64)
+                if image_name:
+                    sources.append(image_name)
 
                 if use_rag and len(self.vector_store.documents) > 0:
-                    context, sources = self.retrieve_context(message, n_results=top_k)
+                    context, rag_sources = self.retrieve_context(message, n_results=top_k)
+                    sources.extend(rag_sources)
 
                 prompt = message
-                if context:
+                combined_context = "\n\n".join(part for part in [context, attachment_context] if part)
+                if combined_context:
                     prompt = (
-                        "Use the image as the primary source and use the additional text context when relevant.\n\n"
-                        f"Context:\n{context}\n\n"
+                        "Use the image as the primary source and use the additional text context when relevant. "
+                        "The attachment contents are already provided below.\n\n"
+                        f"Context:\n{combined_context}\n\n"
                         f"User question: {message}"
                     )
+
+                model_to_use = self.select_vision_model(model_to_use)
 
                 try:
                     response = ollama.chat(
@@ -572,7 +681,7 @@ class RAGChatbot:
                             {
                                 "role": "user",
                                 "content": prompt,
-                                "images": [image_base64]
+                                "images": image_payloads
                             }
                         ]
                     )
@@ -580,7 +689,7 @@ class RAGChatbot:
                     return {
                         "answer": response["message"]["content"],
                         "sources": sources,
-                        "context_used": bool(context),
+                        "context_used": bool(combined_context),
                         "model_used": model_to_use
                     }
                 except Exception as vision_error:
@@ -591,12 +700,47 @@ class RAGChatbot:
                             f"Error: {str(vision_error)}"
                         ),
                         "sources": sources,
-                        "context_used": bool(context),
+                        "context_used": bool(combined_context),
                         "model_used": model_to_use
                     }
 
+            if image_payloads:
+                if use_rag and len(self.vector_store.documents) > 0:
+                    context, rag_sources = self.retrieve_context(message, n_results=top_k)
+                    sources.extend(rag_sources)
+
+                combined_context = "\n\n".join(part for part in [context, attachment_context] if part)
+                prompt = message
+                if combined_context:
+                    prompt = (
+                        "Use the attached image files as the primary source and use the additional text context when relevant. "
+                        "The attachment contents are already provided below.\n\n"
+                        f"Context:\n{combined_context}\n\n"
+                        f"User question: {message}"
+                    )
+
+                model_to_use = self.select_vision_model(model_to_use)
+                response = ollama.chat(
+                    model=model_to_use,
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": prompt,
+                            "images": image_payloads,
+                        }
+                    ]
+                )
+
+                return {
+                    "answer": response["message"]["content"],
+                    "sources": list(dict.fromkeys(sources)),
+                    "context_used": bool(combined_context),
+                    "model_used": model_to_use,
+                }
+
             if use_rag and len(self.vector_store.documents) > 0:
-                context, sources = self.retrieve_context(message, n_results=top_k)
+                context, rag_sources = self.retrieve_context(message, n_results=top_k)
+                sources.extend(rag_sources)
                 
                 # Check if context contains image references and user is asking about images
                 image_keywords = ['image', 'picture', 'photo', 'whats in', 'what is in', 'describe', 'show']
@@ -609,6 +753,7 @@ class RAGChatbot:
                             image_path = line.replace('Path:', '').strip()
                             
                             # Check if model supports vision
+                            model_to_use = self.select_vision_model(model_to_use)
                             model_lower = model_to_use.lower()
                             if any(x in model_lower for x in ['ministral', 'llava', 'vision', 'pixtral']):
                                 try:
@@ -640,16 +785,20 @@ class RAGChatbot:
                                     # Fall through to normal chat if image processing fails
 
             # Prepare messages for normal chat
-            if context:
+            combined_context = "\n\n".join(part for part in [context, attachment_context] if part)
+
+            if combined_context:
                 messages = [
                     {
                         "role": "system",
                         "content": f"""You are a helpful AI assistant. Use the following context to answer the user's question accurately.
 
+The attachment file contents are already included in the context below. Do not say you cannot access attached files.
+
 If the context doesn't contain relevant information, politely say so and provide a general response if possible.
 
 Context:
-{context}
+{combined_context}
 """
                     },
                     {"role": "user", "content": message}
@@ -674,8 +823,8 @@ Context:
 
             return {
                 "answer": answer,
-                "sources": sources,
-                "context_used": bool(context),
+                "sources": list(dict.fromkeys(sources)),
+                "context_used": bool(combined_context),
                 "model_used": model_to_use
             }
             

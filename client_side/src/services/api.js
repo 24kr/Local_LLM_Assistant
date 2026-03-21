@@ -31,7 +31,8 @@ export async function chat(
     top_k = 3,
     model = null,
     imageBase64 = null,
-    imageName = null
+    imageName = null,
+    attachmentIds = []
 ) {
     return apiRequest("/chat", {
         method: "POST",
@@ -42,7 +43,42 @@ export async function chat(
             model,
             image_base64: imageBase64,
             image_name: imageName,
+            attachment_ids: attachmentIds,
         }),
+    });
+}
+
+export async function uploadChatAttachments(chatId, messageId, files) {
+    try {
+        const formData = new FormData();
+        formData.append("chat_id", chatId);
+        formData.append("message_id", messageId);
+        files.forEach((file) => formData.append("files", file));
+
+        const response = await fetch(`${API_BASE_URL}/attachments/upload`, {
+            method: "POST",
+            body: formData,
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.detail || `Attachment upload failed: ${response.status}`);
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error("Attachment Upload Failed:", error);
+        throw error;
+    }
+}
+
+export async function listChatAttachments() {
+    return apiRequest("/attachments");
+}
+
+export async function deleteChatAttachment(attachmentId) {
+    return apiRequest(`/attachments/${attachmentId}`, {
+        method: "DELETE",
     });
 }
 
@@ -53,6 +89,13 @@ export async function listModels() {
 
 export async function switchModel(modelName) {
     return apiRequest("/models/switch", {
+        method: "POST",
+        body: JSON.stringify({ model_name: modelName }),
+    });
+}
+
+export async function switchEmbeddingModel(modelName) {
+    return apiRequest("/models/switch-embedding", {
         method: "POST",
         body: JSON.stringify({ model_name: modelName }),
     });

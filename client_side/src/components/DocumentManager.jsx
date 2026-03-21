@@ -1,13 +1,23 @@
 import { useState, useRef, useEffect } from "react";
-import { listDocuments, deleteDocument, uploadDocument } from "../services/api";
+import {
+    listDocuments,
+    deleteDocument,
+    uploadDocument,
+    listChatAttachments,
+    deleteChatAttachment,
+    API_URL,
+} from "../services/api";
+import { getAllChats, removeAttachmentReferences } from "../utils/chatStorage";
+import { formatFileSize, getFileIcon } from "../utils/fileTypes";
 
 export default function DocumentManager() {
     const [documents, setDocuments] = useState([]);
+    const [attachments, setAttachments] = useState([]);
     const [loading, setLoading] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [status, setStatus] = useState("");
     const [error, setError] = useState(null);
-    const [stats, setStats] = useState({ total_documents: 0, total_chunks: 0 });
+    const [stats, setStats] = useState({ total_documents: 0, total_chunks: 0, total_attachments: 0 });
     const [selectedFile, setSelectedFile] = useState(null);
     const fileInputRef = useRef(null);
 
@@ -20,11 +30,17 @@ export default function DocumentManager() {
         setLoading(true);
         setError(null);
         try {
-            const data = await listDocuments();
-            setDocuments(data.documents || []);
+            const [documentData, attachmentData] = await Promise.all([
+                listDocuments(),
+                listChatAttachments(),
+            ]);
+
+            setDocuments(documentData.documents || []);
+            setAttachments(attachmentData.attachments || []);
             setStats({
-                total_documents: data.total_documents || 0,
-                total_chunks: data.total_chunks || 0,
+                total_documents: documentData.total_documents || 0,
+                total_chunks: documentData.total_chunks || 0,
+                total_attachments: attachmentData.total_attachments || 0,
             });
         } catch (err) {
             setError("Failed to load documents");
@@ -89,39 +105,28 @@ export default function DocumentManager() {
         }
     }
 
-    function formatFileSize(bytes) {
-        if (bytes < 1024) return bytes + " B";
-        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
-        return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+    function getChatLabel(chatId) {
+        if (!chatId) {
+            return "Unassigned chat";
+        }
+
+        const chat = getAllChats().find((item) => item.id === chatId);
+        return chat?.title || chatId;
     }
 
-    function getFileIcon(filename) {
-        const ext = filename.split('.').pop().toLowerCase();
-        
-        // Images
-        if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'ico', 'webp', 'bmp', 'tif', 'tiff'].includes(ext)) {
-            return "🖼️";
+    async function handleDeleteAttachment(attachment) {
+        if (!window.confirm(`Delete attachment "${attachment.filename}" from all chats?`)) return;
+
+        try {
+            await deleteChatAttachment(attachment.id);
+            removeAttachmentReferences([attachment.id]);
+            setStatus(`✅ Deleted attachment: ${attachment.filename}`);
+            await loadDocuments();
+            setTimeout(() => setStatus(""), 3000);
+        } catch (err) {
+            setError(`Failed to delete attachment ${attachment.filename}`);
+            console.error("Attachment delete error:", err);
         }
-        // Documents
-        if (['pdf'].includes(ext)) return "📕";
-        if (['docx', 'doc'].includes(ext)) return "📘";
-        if (['xlsx', 'xls', 'csv'].includes(ext)) return "📊";
-        if (['txt', 'md'].includes(ext)) return "📄";
-        // Code files
-        if (['html', 'css'].includes(ext)) return "🌐";
-        if (['js', 'jsx', 'ts', 'tsx', 'json'].includes(ext)) return "⚙️";
-        if (['py'].includes(ext)) return "🐍";
-        if (['java'].includes(ext)) return "☕";
-        if (['cpp', 'c', 'h'].includes(ext)) return "⚡";
-        if (['php'].includes(ext)) return "🐘";
-        if (['rb'].includes(ext)) return "💎";
-        if (['go'].includes(ext)) return "🔷";
-        if (['rs'].includes(ext)) return "🦀";
-        if (['sh', 'bat'].includes(ext)) return "🖥️";
-        if (['yaml', 'yml', 'xml', 'env'].includes(ext)) return "⚙️";
-        if (['sql'].includes(ext)) return "🗄️";
-        
-        return "📄";
     }
 
     return (
@@ -152,6 +157,13 @@ export default function DocumentManager() {
                     <div className="stat-content">
                         <div className="stat-value">{stats.total_chunks}</div>
                         <div className="stat-label">Chunks</div>
+                    </div>
+                </div>
+                <div className="stat-card">
+                    <div className="stat-icon">📎</div>
+                    <div className="stat-content">
+                        <div className="stat-value">{stats.total_attachments}</div>
+                        <div className="stat-label">Chat Attachments</div>
                     </div>
                 </div>
             </div>
@@ -263,6 +275,59 @@ export default function DocumentManager() {
                                     className="btn-delete"
                                     onClick={() => handleDelete(doc.filename)}
                                     title="Delete document"
+                                >
+                                    🗑️
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            <div className="documents-section attachment-section">
+                <h3>Chat Attachments</h3>
+
+                {loading ? (
+                    <div className="loading-state">
+                        <div className="spinner"></div>
+                        <p>Loading attachments...</p>
+                    </div>
+                ) : attachments.length === 0 ? (
+                    <div className="empty-state compact-empty-state">
+                        <div className="empty-icon">📎</div>
+                        <h4>No chat attachments yet</h4>
+                        <p>Attach files in a chat to manage them here.</p>
+                    </div>
+                ) : (
+                    <div className="documents-list">
+                        {attachments.map((attachment) => (
+                            <div key={attachment.id} className="document-card">
+                                <div className="doc-icon">
+                                    {getFileIcon(attachment.filename)}
+                                </div>
+                                <div className="doc-info">
+                                    <div className="doc-name" title={attachment.filename}>
+                                        {attachment.filename}
+                                    </div>
+                                    <div className="doc-meta attachment-meta">
+                                        <span className="doc-chunks">💾 {formatFileSize(attachment.size)}</span>
+                                        <span className="doc-date">💬 {getChatLabel(attachment.chat_id)}</span>
+                                        <span className="doc-date">📅 {new Date(attachment.upload_date).toLocaleDateString()}</span>
+                                    </div>
+                                </div>
+                                <a
+                                    className="btn-secondary btn-sm attachment-open-btn"
+                                    href={`${API_URL}/attachments/${attachment.id}/file`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    title="Open attachment"
+                                >
+                                    Open
+                                </a>
+                                <button
+                                    className="btn-delete"
+                                    onClick={() => handleDeleteAttachment(attachment)}
+                                    title="Delete attachment"
                                 >
                                     🗑️
                                 </button>

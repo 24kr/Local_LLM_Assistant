@@ -12,6 +12,7 @@ class ChatRequest(BaseModel):
     model: Optional[str] = None  # Allow per-request model override
     image_base64: Optional[str] = None
     image_name: Optional[str] = None
+    attachment_ids: List[str] = Field(default_factory=list)
     
     @validator('message')
     def validate_message(cls, v):
@@ -32,6 +33,15 @@ class ModelSwitchRequest(BaseModel):
             raise ValueError('Model name cannot be empty')
         return v.strip()
 
+class EmbeddingModelSwitchRequest(BaseModel):
+    model_name: str = Field(..., min_length=1)
+
+    @validator('model_name')
+    def validate_model_name(cls, v):
+        if not v.strip():
+            raise ValueError('Model name cannot be empty')
+        return v.strip()
+
 # ============ Response Schemas ============
 
 class ChatResponse(BaseModel):
@@ -45,6 +55,7 @@ class MessageModel(BaseModel):
     role: str = Field(..., pattern="^(user|assistant)$")
     text: str
     sources: List[str] = []
+    attachments: List[Dict] = []
     context_used: Optional[bool] = None
     timestamp: str
 
@@ -112,6 +123,28 @@ class ModelListResponse(BaseModel):
     models: List[ModelInfo]
     current_llm: str
     current_embedding: str
+
+class AttachmentInfo(BaseModel):
+    id: str
+    chat_id: Optional[str] = None
+    message_id: Optional[str] = None
+    filename: str
+    stored_filename: str
+    mime_type: str
+    size: int
+    extension: str
+    file_type: str
+    upload_date: str
+
+class AttachmentUploadResponse(BaseModel):
+    status: str
+    attachments: List[AttachmentInfo]
+    unsupported_files: List[str] = []
+    message: Optional[str] = None
+
+class AttachmentListResponse(BaseModel):
+    attachments: List[AttachmentInfo]
+    total_attachments: int
     
 class DeleteDocumentRequest(BaseModel):
     filename: str

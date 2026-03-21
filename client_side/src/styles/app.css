@@ -408,6 +408,52 @@ body {
   animation: slideIn 0.3s ease;
 }
 
+.message strong {
+  display: inline-block;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+}
+
+.message > p {
+  margin: 0;
+  padding: 12px 16px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  line-height: 1.6;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.message-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.message-attachment-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.message-attachment-chip:hover {
+  border-color: var(--accent-primary);
+  color: var(--text-primary);
+}
+
+.message-attachment-size {
+  color: var(--text-tertiary);
+}
+
 @keyframes slideIn {
   from {
     opacity: 0;
@@ -598,13 +644,25 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  margin-bottom: 8px;
   padding: 8px 12px;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   background: var(--bg-secondary);
   color: var(--text-secondary);
   font-size: 13px;
+}
+
+.attachment-preview-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.attachment-preview-meta {
+  margin-left: auto;
+  color: var(--text-tertiary);
+  font-size: 12px;
 }
 
 .btn-clear-attachment {
@@ -1316,6 +1374,10 @@ body {
   border: 1px solid var(--border-color);
 }
 
+.attachment-section {
+  margin-top: 24px;
+}
+
 .documents-section h3 {
   font-size: 18px;
   margin-bottom: 16px;
@@ -1359,6 +1421,18 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.attachment-meta {
+  flex-wrap: wrap;
+}
+
+.attachment-open-btn {
+  text-decoration: none;
+}
+
+.compact-empty-state {
+  padding: 20px 0;
 }
 
 .doc-meta {
@@ -1472,6 +1546,39 @@ body {
 
 .setting-item:last-child {
   border-bottom: none;
+}
+
+.setting-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.vertical-align {
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.setting-control-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.settings-select {
+  min-width: 260px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.settings-select:focus {
+  outline: none;
+  border-color: var(--accent-primary);
 }
 
 .setting-label {

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { listModels, switchModel, getCurrentModel } from "../services/api";
 
-export default function ModelSelector({ onModelChange }) {
+export default function ModelSelector({ onModelChange, selectedModel }) {
     const [models, setModels] = useState([]);
     const [currentModel, setCurrentModel] = useState("");
     const [loading, setLoading] = useState(false);
@@ -11,6 +11,12 @@ export default function ModelSelector({ onModelChange }) {
     useEffect(() => {
         loadModels();
     }, []);
+
+    useEffect(() => {
+        if (selectedModel) {
+            setCurrentModel(selectedModel);
+        }
+    }, [selectedModel]);
 
     async function loadModels() {
         setLoading(true);

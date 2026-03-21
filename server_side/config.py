@@ -18,8 +18,8 @@ class Settings(BaseSettings):
     ]
     
     # Model Settings
-    LLM_MODEL: str = "ministral-3"
-    EMBEDDING_MODEL: str = "nomic-embed-text"
+    LLM_MODEL: str = "qwen3"
+    EMBEDDING_MODEL: str = "qwen3-embedding"
     
     # RAG Settings
     CHUNK_SIZE: int = 500
@@ -47,6 +47,8 @@ class Settings(BaseSettings):
     # Storage Paths
     UPLOAD_DIR: Path = Path("uploads")
     STORAGE_DIR: Path = Path("storage")
+    ATTACHMENTS_DIR: Path = Path("storage/chat_attachments")
+    ATTACHMENTS_METADATA_FILE: str = "chat_attachments.json"
     KB_FILE: str = "knowledge_base.pkl"
     
     # Logging
@@ -61,5 +63,6 @@ class Settings(BaseSettings):
         # Create directories if they don't exist
         self.UPLOAD_DIR.mkdir(exist_ok=True, parents=True)
         self.STORAGE_DIR.mkdir(exist_ok=True, parents=True)
+        self.ATTACHMENTS_DIR.mkdir(exist_ok=True, parents=True)
 
 settings = Settings()

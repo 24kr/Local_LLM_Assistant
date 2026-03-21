@@ -1,12 +1,15 @@
-from fastapi import FastAPI, HTTPException, UploadFile, File, status
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
+from attachment_store import AttachmentStore
 from rag_engine import RAGChatbot
 from schemas import (
     ChatRequest, ChatResponse, AddDocumentRequest,
     UploadResponse, DocumentListResponse, StatusResponse,
     ErrorResponse, HealthResponse, DeleteDocumentRequest,
-    ModelListResponse, ModelSwitchRequest
+    ModelListResponse, ModelSwitchRequest,
+    AttachmentUploadResponse, AttachmentListResponse,
+    EmbeddingModelSwitchRequest
 )
 from config import settings
 from pathlib import Path
@@ -60,6 +63,13 @@ try:
 except Exception as e:
     logger.error(f"Failed to initialize chatbot: {e}")
     raise
+
+attachment_store = AttachmentStore(
+    attachments_dir=settings.ATTACHMENTS_DIR,
+    metadata_path=settings.STORAGE_DIR / settings.ATTACHMENTS_METADATA_FILE,
+    allowed_extensions=settings.ALLOWED_EXTENSIONS,
+    max_file_size_mb=settings.MAX_FILE_SIZE_MB,
+)
 
 # ============ Exception Handlers ============
 
@@ -198,6 +208,47 @@ async def switch_model(req: ModelSwitchRequest):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to switch model: {str(e)}"
+        )
+
+@app.post("/models/switch-embedding", response_model=StatusResponse)
+async def switch_embedding_model(req: EmbeddingModelSwitchRequest):
+    """Switch the active embedding model"""
+    try:
+        models_response = ollama.list()
+        available_models = [
+            m.get('name') or m.get('model', '')
+            for m in models_response.get('models', [])
+        ]
+
+        if req.model_name not in available_models:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Model '{req.model_name}' not found. Available: {', '.join(available_models)}"
+            )
+
+        if 'embed' not in req.model_name.lower():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Model '{req.model_name}' does not appear to be an embedding model"
+            )
+
+        old_model = chatbot.embedding_model
+        chatbot.embedding_model = req.model_name
+
+        logger.info(f"Switched embedding model from {old_model} to {req.model_name}")
+
+        return StatusResponse(
+            status="success",
+            message=f"Switched embedding model to {req.model_name}"
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error switching embedding model: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to switch embedding model: {str(e)}"
         )
 
 @app.get("/models/current")
@@ -426,7 +477,9 @@ async def chat(req: ChatRequest):
             top_k=req.top_k or settings.TOP_K_RESULTS,
             model_override=model_to_use,
             image_base64=req.image_base64,
-            image_name=req.image_name
+            image_name=req.image_name,
+            attachment_ids=req.attachment_ids,
+            attachment_lookup=attachment_store,
         )
         
         return ChatResponse(
@@ -444,6 +497,99 @@ async def chat(req: ChatRequest):
         )
 
 # ============ File Upload Endpoints ============
+
+@app.post("/attachments/upload", response_model=AttachmentUploadResponse)
+async def upload_chat_attachments(
+    chat_id: str = Form(...),
+    message_id: str = Form(...),
+    files: list[UploadFile] = File(...),
+):
+    """Upload one or more chat attachments and persist metadata for later access."""
+    try:
+        attachments, unsupported_files = await attachment_store.save_uploads(
+            files=files,
+            chat_id=chat_id,
+            message_id=message_id,
+        )
+
+        message = f"Uploaded {len(attachments)} attachment(s)."
+        if unsupported_files:
+            message += f" Skipped unsupported files: {', '.join(unsupported_files)}"
+
+        return AttachmentUploadResponse(
+            status="success",
+            attachments=attachments,
+            unsupported_files=unsupported_files,
+            message=message,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        )
+    except Exception as e:
+        logger.error(f"Error uploading chat attachments: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error uploading chat attachments: {str(e)}"
+        )
+
+
+@app.get("/attachments", response_model=AttachmentListResponse)
+async def list_attachments():
+    """List all persisted chat attachments across chats."""
+    try:
+        attachments = attachment_store.list_attachments()
+        return AttachmentListResponse(
+            attachments=attachments,
+            total_attachments=len(attachments),
+        )
+    except Exception as e:
+        logger.error(f"Error listing attachments: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+
+@app.get("/attachments/{attachment_id}/file")
+async def get_attachment_file(attachment_id: str):
+    """Download or open a stored chat attachment."""
+    record = attachment_store.get_attachment(attachment_id)
+    if not record:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Attachment not found"
+        )
+
+    file_path = attachment_store.resolve_record_path(record)
+    if not file_path.exists():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Attachment file missing on disk"
+        )
+
+    return FileResponse(
+        path=file_path,
+        media_type=record.get("mime_type") or "application/octet-stream",
+        filename=record.get("filename") or file_path.name,
+    )
+
+
+@app.delete("/attachments/{attachment_id}", response_model=StatusResponse)
+async def delete_attachment(attachment_id: str):
+    """Delete a stored chat attachment."""
+    record = attachment_store.delete_attachment(attachment_id)
+    if not record:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Attachment not found"
+        )
+
+    return StatusResponse(
+        status="success",
+        message=f"Deleted attachment '{record['filename']}'"
+    )
 
 def validate_file(file: UploadFile) -> tuple[bool, str]:
     """Validate uploaded file"""

@@ -1,11 +1,22 @@
 import { useState, useEffect } from "react";
-import { getHealth, getStats, saveKnowledgeBase, clearAllDocuments, listModels } from "../services/api";
+import {
+    getHealth,
+    getStats,
+    saveKnowledgeBase,
+    clearAllDocuments,
+    listModels,
+    switchEmbeddingModel,
+    getCurrentModel,
+} from "../services/api";
 
 export default function Settings({ darkMode, toggleDarkMode, useRag, setUseRag }) {
     const [health, setHealth] = useState(null);
     const [stats, setStats] = useState(null);
     const [models, setModels] = useState([]);
+    const [currentEmbeddingModel, setCurrentEmbeddingModel] = useState("");
+    const [selectedEmbeddingModel, setSelectedEmbeddingModel] = useState("");
     const [loading, setLoading] = useState(false);
+    const [embeddingLoading, setEmbeddingLoading] = useState(false);
     const [status, setStatus] = useState("");
 
     useEffect(() => {
@@ -31,10 +42,37 @@ export default function Settings({ darkMode, toggleDarkMode, useRag, setUseRag }
 
     async function loadModels() {
         try {
-            const data = await listModels();
+            const [data, current] = await Promise.all([
+                listModels(),
+                getCurrentModel(),
+            ]);
             setModels(data.models || []);
+            setCurrentEmbeddingModel(current.embedding_model || "");
+            setSelectedEmbeddingModel(current.embedding_model || "");
         } catch (err) {
             console.error("Failed to load models:", err);
+        }
+    }
+
+    async function handleEmbeddingSwitch() {
+        if (!selectedEmbeddingModel || selectedEmbeddingModel === currentEmbeddingModel) {
+            return;
+        }
+
+        setEmbeddingLoading(true);
+        setStatus("Switching embedding model...");
+
+        try {
+            await switchEmbeddingModel(selectedEmbeddingModel);
+            setCurrentEmbeddingModel(selectedEmbeddingModel);
+            await loadHealthAndStats();
+            await loadModels();
+            setStatus(`✅ Switched embedding model to ${selectedEmbeddingModel}`);
+            setTimeout(() => setStatus(""), 3000);
+        } catch (err) {
+            setStatus(`❌ ${err.message || "Failed to switch embedding model"}`);
+        } finally {
+            setEmbeddingLoading(false);
         }
     }
 
@@ -83,6 +121,8 @@ export default function Settings({ darkMode, toggleDarkMode, useRag, setUseRag }
         };
         return badges[cap] || { icon: '🤖', label: cap, color: 'gray' };
     }
+
+    const embeddingModels = models.filter((model) => model.capabilities.includes("embedding"));
 
     return (
         <div className="settings-container">
@@ -169,6 +209,48 @@ export default function Settings({ darkMode, toggleDarkMode, useRag, setUseRag }
                 >
                     🔄 Refresh Models
                 </button>
+            </div>
+
+            <div className="settings-section">
+                <h3>🔢 Embedding Model</h3>
+                {embeddingModels.length === 0 ? (
+                    <p className="text-secondary">No embedding-capable models detected. Pull one with: ollama pull qwen3-embedding:4b</p>
+                ) : (
+                    <div className="setting-stack">
+                        <div className="setting-item vertical-align">
+                            <div className="setting-info">
+                                <div className="setting-label">Current Embedding Model</div>
+                                <div className="setting-description">
+                                    Used for document and query embeddings in RAG retrieval.
+                                </div>
+                            </div>
+                            <div className="setting-control-group">
+                                <select
+                                    className="settings-select"
+                                    value={selectedEmbeddingModel}
+                                    onChange={(e) => setSelectedEmbeddingModel(e.target.value)}
+                                    disabled={embeddingLoading}
+                                >
+                                    {embeddingModels.map((model) => (
+                                        <option key={model.name} value={model.name}>
+                                            {model.name}
+                                        </option>
+                                    ))}
+                                </select>
+                                <button
+                                    className="btn-primary"
+                                    onClick={handleEmbeddingSwitch}
+                                    disabled={embeddingLoading || !selectedEmbeddingModel || selectedEmbeddingModel === currentEmbeddingModel}
+                                >
+                                    {embeddingLoading ? "Switching..." : "Apply Embedding Model"}
+                                </button>
+                            </div>
+                        </div>
+                        <p className="text-secondary">
+                            Active model: <strong>{currentEmbeddingModel || "N/A"}</strong>
+                        </p>
+                    </div>
+                )}
             </div>
 
             {/* System Information */}

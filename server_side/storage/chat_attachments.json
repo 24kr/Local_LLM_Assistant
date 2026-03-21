@@ -1,0 +1,67 @@
+[
+  {
+    "id": "a66f917d0e944f3d99c542aade3d5ea0",
+    "chat_id": "chat_1774037466504_80f4w1ur2",
+    "message_id": "msg_1774037503860_v5043t3",
+    "filename": "workscreen.png",
+    "stored_filename": "a66f917d0e944f3d99c542aade3d5ea0.png",
+    "path": "storage\\chat_attachments\\a66f917d0e944f3d99c542aade3d5ea0.png",
+    "mime_type": "image/png",
+    "size": 436805,
+    "extension": ".png",
+    "file_type": "image",
+    "upload_date": "2026-03-20T22:11:43.884709"
+  },
+  {
+    "id": "b3842307ad884773a0c448927e3be80f",
+    "chat_id": "chat_1774097968393_q4dydgvew",
+    "message_id": "msg_1774098073766_ypb1gye",
+    "filename": "[G-GENAI-I]_Reading list_Introduction_to_Generative_AI_v2.0.1.pdf",
+    "stored_filename": "b3842307ad884773a0c448927e3be80f.pdf",
+    "path": "D:\\Local_LLM_Assistant\\server_side\\storage\\chat_attachments\\b3842307ad884773a0c448927e3be80f.pdf",
+    "mime_type": "application/pdf",
+    "size": 100664,
+    "extension": ".pdf",
+    "file_type": "document",
+    "upload_date": "2026-03-21T15:01:13.806733"
+  },
+  {
+    "id": "42d5177b6ffa47238fc2774d618bbfbe",
+    "chat_id": "chat_1774098976286_pwtlq4yoq",
+    "message_id": "msg_1774099213233_ox3piqu",
+    "filename": "FSI-2023-DOWNLOAD.xlsx",
+    "stored_filename": "42d5177b6ffa47238fc2774d618bbfbe.xlsx",
+    "path": "D:\\Local_LLM_Assistant\\server_side\\storage\\chat_attachments\\42d5177b6ffa47238fc2774d618bbfbe.xlsx",
+    "mime_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "size": 26952,
+    "extension": ".xlsx",
+    "file_type": "document",
+    "upload_date": "2026-03-21T15:20:13.265757"
+  },
+  {
+    "id": "68faeb3f3d6742feacc32e7ad0a032e4",
+    "chat_id": "chat_1774101240699_84y4ujx64",
+    "message_id": "msg_1774101356699_u7a7zjn",
+    "filename": "DevOps Platforms and Operations_ DataOps Principles.pdf",
+    "stored_filename": "68faeb3f3d6742feacc32e7ad0a032e4.pdf",
+    "path": "D:\\Local_LLM_Assistant\\server_side\\storage\\chat_attachments\\68faeb3f3d6742feacc32e7ad0a032e4.pdf",
+    "mime_type": "application/pdf",
+    "size": 42343,
+    "extension": ".pdf",
+    "file_type": "document",
+    "upload_date": "2026-03-21T15:55:56.737896"
+  },
+  {
+    "id": "4008bca38e2d428588f17966abb5105c",
+    "chat_id": "chat_1774101240699_84y4ujx64",
+    "message_id": "msg_1774101356699_u7a7zjn",
+    "filename": "DevOps Tools_ Selecting the Right Tools.pdf",
+    "stored_filename": "4008bca38e2d428588f17966abb5105c.pdf",
+    "path": "D:\\Local_LLM_Assistant\\server_side\\storage\\chat_attachments\\4008bca38e2d428588f17966abb5105c.pdf",
+    "mime_type": "application/pdf",
+    "size": 42869,
+    "extension": ".pdf",
+    "file_type": "document",
+    "upload_date": "2026-03-21T15:55:56.742181"
+  }
+]
