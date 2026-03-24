@@ -1,6 +1,6 @@
 ﻿<div align="center">
 
-# 🚀 LoLA - Local LLM Assistant
+# LoLA - Local LLM Assistant
 
 ### Privacy-First AI Desktop Application with Advanced RAG Capabilities
 
@@ -178,9 +178,13 @@ LoLA/
 ### Prerequisites
 
 **Required Software:**
-- [Python 3.8+](https://www.python.org/downloads/) - Backend runtime
-- [Node.js 16+](https://nodejs.org/) - Frontend build tool
 - [Ollama](https://ollama.com/) - LLM runtime engine
+
+**Runtime Notes:**
+- Desktop installer builds are bundle-native: backend code is packaged with the app.
+- On first launch, LoLA auto-detects missing backend runtime requirements and installs them automatically.
+- Windows users do not need to pre-install Python for installer builds. LoLA can provision a local isolated runtime if Python is missing.
+- Node.js is only required for source development, not for installed desktop usage.
 
 **Required Models:**
 ```bash
@@ -196,8 +200,6 @@ ollama pull llama3             # Fast general-purpose model
 
 **Verify Installation:**
 ```bash
-python --version   # Should show 3.8+
-node --version     # Should show 16+
 ollama list        # Should show installed models
 ```
 
@@ -231,9 +233,13 @@ The launcher will:
 
 ### Option 1: Automated Setup (Recommended)
 
-Use the provided launch scripts (see [Quick Start](#-quick-start)).
+Use the packaged desktop installer from the release artifacts. After installation, open LoLA and it will automatically prepare the backend runtime if needed.
+
+If backend files are intentionally not bundled in a custom build, set `LOCAL_LLM_BACKEND_URL` to a zip URL containing a `server_side/` folder and LoLA will download and hydrate the backend automatically on startup.
 
 ### Option 2: Manual Installation
+
+Use this option only for development from source.
 
 **Backend Setup:**
 ```bash
