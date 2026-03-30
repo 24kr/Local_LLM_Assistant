@@ -1,4 +1,5 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const { spawn } = require('child_process');
 const { prepareBackendRuntime, waitForBackendReady } = require('./runtimeBootstrap.cjs');
@@ -91,6 +92,7 @@ app.whenReady().then(() => {
     startBackend()
         .then(() => {
             createWindow();
+            setupAutoUpdater();
         })
         .catch((err) => {
             console.error('Startup failed:', err);
@@ -142,3 +144,39 @@ ipcMain.handle('get-app-path', () => {
 ipcMain.handle('get-version', () => {
     return app.getVersion();
 });
+
+ipcMain.handle('install-update', () => {
+    autoUpdater.quitAndInstall();
+});
+
+// ─── Auto-Updater ──────────────────────────────────────────────
+function setupAutoUpdater() {
+    if (isDev) return; // skip in dev — no published build to compare against
+
+    autoUpdater.autoDownload = true;
+    autoUpdater.autoInstallOnAppQuit = true;
+
+    autoUpdater.on('update-available', (info) => {
+        mainWindow?.webContents.send('update-available', {
+            version: info.version,
+            releaseNotes: typeof info.releaseNotes === 'string' ? info.releaseNotes : ''
+        });
+    });
+
+    autoUpdater.on('update-downloaded', (info) => {
+        mainWindow?.webContents.send('update-downloaded', {
+            version: info.version
+        });
+    });
+
+    autoUpdater.on('error', (err) => {
+        console.error('[AutoUpdater] Error:', err.message);
+    });
+
+    // Delay first check so it doesn't race with window load
+    setTimeout(() => {
+        autoUpdater.checkForUpdates().catch((err) => {
+            console.error('[AutoUpdater] Check failed:', err.message);
+        });
+    }, 5000);
+}

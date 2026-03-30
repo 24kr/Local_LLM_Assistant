@@ -5,6 +5,7 @@ import Header from "./components/Header";
 import Sidebar from "./components/Sidebar";
 import Settings from "./components/Settings";
 import StatusBar from "./components/StatusBar";
+import UpdateBanner from "./components/UpdateBanner";
 
 export default function App() {
   const [useRag, setUseRag] = useState(true);
@@ -21,6 +22,7 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState("chat"); // chat, documents, settings
   const [apiStatus, setApiStatus] = useState("checking");
+  const [updateInfo, setUpdateInfo] = useState(null);
 
   // Apply dark mode class to body
   useEffect(() => {
@@ -73,8 +75,22 @@ export default function App() {
   const toggleDarkMode = () => setDarkMode(!darkMode);
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
+  // Auto-updater
+  useEffect(() => {
+    if (!window.electron?.updater) return;
+    const { onUpdateAvailable, onUpdateDownloaded, removeListeners } = window.electron.updater;
+    onUpdateAvailable((info) => setUpdateInfo({ ...info, downloaded: false }));
+    onUpdateDownloaded((info) => setUpdateInfo({ ...info, downloaded: true }));
+    return () => removeListeners();
+  }, []);
+
   return (
     <div className={`app ${darkMode ? "dark" : "light"}`}>
+      <UpdateBanner
+        updateInfo={updateInfo}
+        onDismiss={() => setUpdateInfo(null)}
+        onInstall={() => window.electron?.updater?.installUpdate()}
+      />
       <Header
         darkMode={darkMode}
         toggleDarkMode={toggleDarkMode}

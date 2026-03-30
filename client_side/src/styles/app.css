@@ -1899,6 +1899,73 @@ button:disabled {
   border-radius: 4px;
 }
 
+/* ========================================
+   Update Banner
+======================================== */
+.update-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 16px;
+  background: var(--accent-light);
+  border-bottom: 1px solid var(--accent-primary);
+  font-size: 13px;
+  color: var(--text-primary);
+  z-index: 200;
+  flex-shrink: 0;
+}
+
+.update-banner--ready {
+  background: var(--success-light);
+  border-color: var(--success);
+}
+
+.update-banner__icon {
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+.update-banner__text {
+  flex: 1;
+}
+
+.update-banner__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.update-banner__btn {
+  border: none;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  padding: 4px 10px;
+  transition: var(--transition);
+}
+
+.update-banner__btn--install {
+  background: var(--success);
+  color: #fff;
+  font-weight: 600;
+}
+
+.update-banner__btn--install:hover {
+  opacity: 0.85;
+}
+
+.update-banner__btn--dismiss {
+  background: transparent;
+  color: var(--text-secondary);
+  padding: 4px 6px;
+}
+
+.update-banner__btn--dismiss:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
 ::-webkit-scrollbar-thumb:hover {
   background: var(--border-hover);
 }
