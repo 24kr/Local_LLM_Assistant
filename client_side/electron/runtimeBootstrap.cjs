@@ -312,7 +312,26 @@ async function ensureVirtualEnv(paths, basePython) {
 
     log('Creating isolated backend virtual environment...');
     await ensureDir(paths.runtimeRoot);
-    await runCommand(basePython.command, [...basePython.argsPrefix, '-m', 'venv', paths.venvPath]);
+
+    try {
+        await runCommand(basePython.command, [...basePython.argsPrefix, '-m', 'venv', paths.venvPath]);
+    } catch (e) {
+        // Windows embedded Python ships without the venv module.
+        // Fall back to virtualenv which pip can install into the embedded runtime.
+        if (e.message && e.message.includes('No module named venv')) {
+            log('venv not available (embedded Python) — installing virtualenv as fallback...');
+            await runCommand(basePython.command, [
+                ...basePython.argsPrefix,
+                '-m', 'pip', 'install', 'virtualenv', '--quiet'
+            ]);
+            await runCommand(basePython.command, [
+                ...basePython.argsPrefix,
+                '-m', 'virtualenv', paths.venvPath
+            ]);
+        } else {
+            throw e;
+        }
+    }
 }
 
 async function getRequirementsFingerprint(requirementsPath) {
