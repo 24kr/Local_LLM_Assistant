@@ -8,14 +8,30 @@ import {
     API_URL,
 } from "../services/api";
 import { getAllChats, removeAttachmentReferences } from "../utils/chatStorage";
-import { formatFileSize, getFileIcon } from "../utils/fileTypes";
+import { formatFileSize } from "../utils/fileTypes";
+import {
+    AlertIcon,
+    CalendarIcon,
+    CheckCircleIcon,
+    ChunksIcon,
+    ChatBubbleIcon,
+    CloseIcon,
+    FileTypeIcon,
+    LibraryIcon,
+    OpenIcon,
+    PaperclipIcon,
+    RefreshIcon,
+    TrashIcon,
+    UploadIcon,
+} from "./AppIcons";
+import { createStatus } from "../utils/modelStatus";
 
 export default function DocumentManager() {
     const [documents, setDocuments] = useState([]);
     const [attachments, setAttachments] = useState([]);
     const [loading, setLoading] = useState(false);
     const [uploading, setUploading] = useState(false);
-    const [status, setStatus] = useState("");
+    const [status, setStatus] = useState(null);
     const [error, setError] = useState(null);
     const [stats, setStats] = useState({ total_documents: 0, total_chunks: 0, total_attachments: 0 });
     const [selectedFile, setSelectedFile] = useState(null);
@@ -58,18 +74,18 @@ export default function DocumentManager() {
 
         setUploading(true);
         setError(null);
-        setStatus("Uploading and processing...");
+        setStatus(createStatus("Uploading and processing...", "info"));
 
         try {
             const result = await uploadDocument(selectedFile);
-            setStatus(`✅ Uploaded: ${result.filename} (${result.chunks_created} chunks)`);
+            setStatus(createStatus(`Uploaded ${result.filename} (${result.chunks_created} chunks)`, "success"));
             setSelectedFile(null);
             if (fileInputRef.current) {
                 fileInputRef.current.value = "";
             }
             // Reload documents
             await loadDocuments();
-            setTimeout(() => setStatus(""), 5000);
+            setTimeout(() => setStatus(null), 5000);
         } catch (err) {
             setError("Upload failed. Check file size and format.");
             console.error("Upload error:", err);
@@ -83,9 +99,9 @@ export default function DocumentManager() {
 
         try {
             await deleteDocument(filename);
-            setStatus(`✅ Deleted: ${filename}`);
+            setStatus(createStatus(`Deleted ${filename}`, "success"));
             await loadDocuments();
-            setTimeout(() => setStatus(""), 3000);
+            setTimeout(() => setStatus(null), 3000);
         } catch (err) {
             setError(`Failed to delete ${filename}`);
             console.error("Delete error:", err);
@@ -120,9 +136,9 @@ export default function DocumentManager() {
         try {
             await deleteChatAttachment(attachment.id);
             removeAttachmentReferences([attachment.id]);
-            setStatus(`✅ Deleted attachment: ${attachment.filename}`);
+            setStatus(createStatus(`Deleted attachment ${attachment.filename}`, "success"));
             await loadDocuments();
-            setTimeout(() => setStatus(""), 3000);
+            setTimeout(() => setStatus(null), 3000);
         } catch (err) {
             setError(`Failed to delete attachment ${attachment.filename}`);
             console.error("Attachment delete error:", err);
@@ -132,35 +148,35 @@ export default function DocumentManager() {
     return (
         <div className="document-manager">
             <div className="manager-header">
-                <h2>📚 Document Library</h2>
+                <h2 className="section-title"><LibraryIcon size={22} /> Document Library</h2>
                 <button
                     className="btn-secondary btn-sm"
                     onClick={loadDocuments}
                     disabled={loading}
                     title="Refresh"
                 >
-                    🔄 Refresh
+                    <RefreshIcon size={16} /> Refresh
                 </button>
             </div>
 
             {/* Statistics */}
             <div className="stats-cards">
                 <div className="stat-card">
-                    <div className="stat-icon">📄</div>
+                    <div className="stat-icon"><LibraryIcon size={28} /></div>
                     <div className="stat-content">
                         <div className="stat-value">{stats.total_documents}</div>
                         <div className="stat-label">Documents</div>
                     </div>
                 </div>
                 <div className="stat-card">
-                    <div className="stat-icon">🧩</div>
+                    <div className="stat-icon"><ChunksIcon size={28} /></div>
                     <div className="stat-content">
                         <div className="stat-value">{stats.total_chunks}</div>
                         <div className="stat-label">Chunks</div>
                     </div>
                 </div>
                 <div className="stat-card">
-                    <div className="stat-icon">📎</div>
+                    <div className="stat-icon"><PaperclipIcon size={28} /></div>
                     <div className="stat-content">
                         <div className="stat-value">{stats.total_attachments}</div>
                         <div className="stat-label">Chat Attachments</div>
@@ -182,7 +198,7 @@ export default function DocumentManager() {
                         disabled={uploading}
                     />
                     <label htmlFor="file-upload" className="file-label">
-                        <span className="upload-icon">📎</span>
+                        <span className="upload-icon"><UploadIcon size={24} /></span>
                         <span className="upload-text">
                             {selectedFile ? selectedFile.name : "Choose a file"}
                         </span>
@@ -190,7 +206,7 @@ export default function DocumentManager() {
 
                     {selectedFile && (
                         <div className="file-info">
-                            <span className="file-name">{getFileIcon(selectedFile.name)} {selectedFile.name}</span>
+                            <span className="file-name file-name-with-icon"><FileTypeIcon filename={selectedFile.name} size={24} /> {selectedFile.name}</span>
                             <span className="file-size">{formatFileSize(selectedFile.size)}</span>
                             <button
                                 className="btn-clear"
@@ -199,7 +215,7 @@ export default function DocumentManager() {
                                     if (fileInputRef.current) fileInputRef.current.value = "";
                                 }}
                             >
-                                ✕
+                                <CloseIcon size={16} />
                             </button>
                         </div>
                     )}
@@ -209,14 +225,14 @@ export default function DocumentManager() {
                         onClick={handleUpload}
                         disabled={!selectedFile || uploading}
                     >
-                        {uploading ? "⏳ Processing..." : "📤 Upload Document"}
+                        <UploadIcon size={16} /> {uploading ? "Processing..." : "Upload Document"}
                     </button>
 
                     <p className="upload-hint">
                         <strong>Supported formats:</strong><br/>
-                        📄 Documents: PDF, DOCX, TXT, CSV, XLSX<br/>
-                        🖼️ Images: PNG, JPG, SVG, GIF, WebP<br/>
-                        💻 Code: JS, PY, HTML, CSS, JSON, MD, etc.<br/>
+                        Documents: PDF, DOCX, TXT, CSV, XLSX<br/>
+                        Images: PNG, JPG, SVG, GIF, WebP<br/>
+                        Code: JS, PY, HTML, CSS, JSON, MD, etc.<br/>
                         <em>Max size: 50MB</em>
                     </p>
                 </div>
@@ -224,15 +240,18 @@ export default function DocumentManager() {
 
             {/* Status Messages */}
             {status && (
-                <div className="status-message success">
-                    {status}
+                <div className={`status-message ${status.tone}`}>
+                    <span className="status-message__content">
+                        {status.tone === "success" ? <CheckCircleIcon className="status-message__icon" size={16} /> : status.tone === "error" ? <AlertIcon className="status-message__icon" size={16} /> : <RefreshIcon className="status-message__icon" size={16} />}
+                        {status.text}
+                    </span>
                 </div>
             )}
 
             {error && (
                 <div className="status-message error">
-                    <span>⚠️ {error}</span>
-                    <button className="error-close" onClick={() => setError(null)}>✕</button>
+                    <span className="status-message__content"><AlertIcon className="status-message__icon" size={16} /> {error}</span>
+                    <button className="error-close" onClick={() => setError(null)}><CloseIcon size={16} /></button>
                 </div>
             )}
 
@@ -247,7 +266,7 @@ export default function DocumentManager() {
                     </div>
                 ) : documents.length === 0 ? (
                     <div className="empty-state">
-                        <div className="empty-icon">🔭</div>
+                        <div className="empty-icon"><LibraryIcon size={56} /></div>
                         <h4>No documents yet</h4>
                         <p>Upload your first document to get started!</p>
                     </div>
@@ -256,17 +275,17 @@ export default function DocumentManager() {
                         {documents.map((doc, i) => (
                             <div key={i} className="document-card">
                                 <div className="doc-icon">
-                                    {getFileIcon(doc.filename)}
+                                    <FileTypeIcon filename={doc.filename} size={30} />
                                 </div>
                                 <div className="doc-info">
                                     <div className="doc-name" title={doc.filename}>
                                         {doc.filename}
                                     </div>
                                     <div className="doc-meta">
-                                        <span className="doc-chunks">🧩 {doc.chunks} chunks</span>
+                                        <span className="doc-meta-item"><ChunksIcon size={14} /> {doc.chunks} chunks</span>
                                         {doc.upload_date && (
-                                            <span className="doc-date">
-                                                📅 {new Date(doc.upload_date).toLocaleDateString()}
+                                            <span className="doc-meta-item">
+                                                <CalendarIcon size={14} /> {new Date(doc.upload_date).toLocaleDateString()}
                                             </span>
                                         )}
                                     </div>
@@ -276,7 +295,7 @@ export default function DocumentManager() {
                                     onClick={() => handleDelete(doc.filename)}
                                     title="Delete document"
                                 >
-                                    🗑️
+                                    <TrashIcon size={18} />
                                 </button>
                             </div>
                         ))}
@@ -294,7 +313,7 @@ export default function DocumentManager() {
                     </div>
                 ) : attachments.length === 0 ? (
                     <div className="empty-state compact-empty-state">
-                        <div className="empty-icon">📎</div>
+                        <div className="empty-icon"><PaperclipIcon size={56} /></div>
                         <h4>No chat attachments yet</h4>
                         <p>Attach files in a chat to manage them here.</p>
                     </div>
@@ -303,16 +322,16 @@ export default function DocumentManager() {
                         {attachments.map((attachment) => (
                             <div key={attachment.id} className="document-card">
                                 <div className="doc-icon">
-                                    {getFileIcon(attachment.filename)}
+                                    <FileTypeIcon filename={attachment.filename} size={30} />
                                 </div>
                                 <div className="doc-info">
                                     <div className="doc-name" title={attachment.filename}>
                                         {attachment.filename}
                                     </div>
                                     <div className="doc-meta attachment-meta">
-                                        <span className="doc-chunks">💾 {formatFileSize(attachment.size)}</span>
-                                        <span className="doc-date">💬 {getChatLabel(attachment.chat_id)}</span>
-                                        <span className="doc-date">📅 {new Date(attachment.upload_date).toLocaleDateString()}</span>
+                                        <span className="doc-meta-item"><PaperclipIcon size={14} /> {formatFileSize(attachment.size)}</span>
+                                        <span className="doc-meta-item"><ChatBubbleIcon size={14} /> {getChatLabel(attachment.chat_id)}</span>
+                                        <span className="doc-meta-item"><CalendarIcon size={14} /> {new Date(attachment.upload_date).toLocaleDateString()}</span>
                                     </div>
                                 </div>
                                 <a
@@ -322,14 +341,14 @@ export default function DocumentManager() {
                                     rel="noreferrer"
                                     title="Open attachment"
                                 >
-                                    Open
+                                    <OpenIcon size={16} /> Open
                                 </a>
                                 <button
                                     className="btn-delete"
                                     onClick={() => handleDeleteAttachment(attachment)}
                                     title="Delete attachment"
                                 >
-                                    🗑️
+                                    <TrashIcon size={18} />
                                 </button>
                             </div>
                         ))}

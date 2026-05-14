@@ -4,7 +4,21 @@ import Message from "./Message";
 import ChatHistory from "./ChatHistory";
 import ModelSelector from "./ModelSelector";
 import { getAllChats, saveAllChats, setCurrentChatId as persistCurrentChatId } from "../utils/chatStorage";
-import { formatFileSize, getFileIcon, isImageFile, isSupportedAttachment } from "../utils/fileTypes";
+import { formatFileSize, isImageFile, isSupportedAttachment } from "../utils/fileTypes";
+import {
+    AlertIcon,
+    BotIcon,
+    ChatBubbleIcon,
+    CloseIcon,
+    DownloadIcon,
+    FileTypeIcon,
+    PaperclipIcon,
+    PlusIcon,
+    RagOffIcon,
+    RagOnIcon,
+    SendIcon,
+    TrashIcon,
+} from "./AppIcons";
 
 export default function ChatBox({ useRag }) {
     const [currentChatId, setCurrentChatId] = useState(null);
@@ -366,7 +380,7 @@ export default function ChatBox({ useRag }) {
                         onNewChat={createNewChat}
                         onDeleteChat={deleteChat}
                     />
-                    <h2>💬 Chat</h2>
+                    <h2 className="section-title"><ChatBubbleIcon size={20} /> Chat</h2>
                 </div>
                 <div className="chat-actions">
                     <ModelSelector onModelChange={handleModelChange} selectedModel={currentModel} />
@@ -375,15 +389,15 @@ export default function ChatBox({ useRag }) {
                         onClick={createNewChat}
                         title="New Chat"
                     >
-                        ➕ New
+                        <PlusIcon size={16} /> New
                     </button>
                     {messages.length > 0 && (
                         <>
                             <button className="btn-secondary btn-sm" onClick={exportChat} title="Export Chat">
-                                📥 Export
+                                <DownloadIcon size={16} /> Export
                             </button>
                             <button className="btn-secondary btn-sm" onClick={clearChat} title="Clear Chat">
-                                🗑️ Clear
+                                <TrashIcon size={16} /> Clear
                             </button>
                         </>
                     )}
@@ -393,12 +407,12 @@ export default function ChatBox({ useRag }) {
             <div className="messages-container">
                 {messages.length === 0 ? (
                     <div className="empty-state">
-                        <div className="empty-icon">💭</div>
+                        <div className="empty-icon"><BotIcon size={56} /></div>
                         <h3>Start a Conversation</h3>
                         <p>Ask me anything! {useRag ? "I'll use your documents to help." : "I'm ready to chat."}</p>
                         <div className="model-info">
-                            <span className="current-model-badge">
-                                🤖 Using: <strong>{currentModel.split(':')[0]}</strong>
+                            <span className="current-model-badge icon-badge">
+                                <BotIcon size={16} /> Using: <strong>{currentModel.split(':')[0]}</strong>
                             </span>
                         </div>
                         <div className="example-prompts">
@@ -446,10 +460,10 @@ export default function ChatBox({ useRag }) {
 
             {error && (
                 <div className="error-banner">
-                    <span className="error-icon">⚠️</span>
+                    <AlertIcon className="error-icon" size={18} />
                     <span>{error}</span>
                     <button className="error-close" onClick={() => setError(null)}>
-                        ✕
+                        <CloseIcon size={16} />
                     </button>
                 </div>
             )}
@@ -459,7 +473,7 @@ export default function ChatBox({ useRag }) {
                     <div className="attachment-preview-list">
                         {selectedAttachments.map((file, index) => (
                             <div key={`${file.name}-${file.size}-${file.lastModified}`} className="image-attachment-preview">
-                                <span>{getFileIcon(file.name)} {file.name}</span>
+                                <span className="file-name file-name-with-icon"><FileTypeIcon filename={file.name} size={22} /> {file.name}</span>
                                 <span className="attachment-preview-meta">{formatFileSize(file.size)}</span>
                                 <button
                                     className="btn-clear-attachment"
@@ -467,7 +481,7 @@ export default function ChatBox({ useRag }) {
                                     disabled={loading}
                                     title="Remove attachment"
                                 >
-                                    ✕
+                                    <CloseIcon size={14} />
                                 </button>
                             </div>
                         ))}
@@ -498,7 +512,7 @@ export default function ChatBox({ useRag }) {
                         disabled={loading}
                         title="Attach files"
                     >
-                        📎
+                        <PaperclipIcon size={18} />
                     </button>
 
                     <textarea
@@ -517,12 +531,12 @@ export default function ChatBox({ useRag }) {
                         className="send-button"
                         title="Send (Enter)"
                     >
-                        <span className="send-icon">➤</span>
+                        <SendIcon className="send-icon" size={18} />
                     </button>
                 </div>
                 <div className="input-footer">
-                    <span className="input-hint">
-                        🤖 {currentModel.split(':')[0]} • {useRag ? "📚 Using RAG mode" : "💭 Direct chat mode"} • Press Enter to send
+                    <span className="input-hint icon-badge">
+                        <BotIcon size={14} /> {currentModel.split(':')[0]} • {useRag ? <><RagOnIcon size={14} /> Using RAG mode</> : <><RagOffIcon size={14} /> Direct chat mode</>} • Press Enter to send
                     </span>
                 </div>
             </div>

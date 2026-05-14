@@ -8,6 +8,25 @@ import {
     switchEmbeddingModel,
     getCurrentModel,
 } from "../services/api";
+import {
+    AlertIcon,
+    BotIcon,
+    BrainIcon,
+    CheckCircleIcon,
+    DatabaseIcon,
+    InfoIcon,
+    LibraryIcon,
+    LockIcon,
+    ModelCapabilityIcon,
+    PaletteIcon,
+    RefreshIcon,
+    SaveIcon,
+    SettingsIcon,
+    TrashIcon,
+    BoltIcon,
+    getCapabilityBadgeMeta,
+} from "./AppIcons";
+import { createStatus } from "../utils/modelStatus";
 
 export default function Settings({ darkMode, toggleDarkMode, useRag, setUseRag }) {
     const [health, setHealth] = useState(null);
@@ -17,7 +36,7 @@ export default function Settings({ darkMode, toggleDarkMode, useRag, setUseRag }
     const [selectedEmbeddingModel, setSelectedEmbeddingModel] = useState("");
     const [loading, setLoading] = useState(false);
     const [embeddingLoading, setEmbeddingLoading] = useState(false);
-    const [status, setStatus] = useState("");
+    const [status, setStatus] = useState(null);
 
     useEffect(() => {
         loadHealthAndStats();
@@ -60,35 +79,35 @@ export default function Settings({ darkMode, toggleDarkMode, useRag, setUseRag }
         }
 
         setEmbeddingLoading(true);
-        setStatus("Switching embedding model...");
+        setStatus(createStatus("Switching embedding model...", "info"));
 
         try {
             await switchEmbeddingModel(selectedEmbeddingModel);
             setCurrentEmbeddingModel(selectedEmbeddingModel);
             await loadHealthAndStats();
             await loadModels();
-            setStatus(`✅ Switched embedding model to ${selectedEmbeddingModel}`);
-            setTimeout(() => setStatus(""), 3000);
+            setStatus(createStatus(`Switched embedding model to ${selectedEmbeddingModel}`, "success"));
+            setTimeout(() => setStatus(null), 3000);
         } catch (err) {
-            setStatus(`❌ ${err.message || "Failed to switch embedding model"}`);
+            setStatus(createStatus(err.message || "Failed to switch embedding model", "error"));
         } finally {
             setEmbeddingLoading(false);
         }
     }
 
     async function handleSaveKB() {
-        setStatus("Saving knowledge base...");
+        setStatus(createStatus("Saving knowledge base...", "info"));
         try {
             await saveKnowledgeBase();
-            setStatus("✅ Knowledge base saved successfully!");
-            setTimeout(() => setStatus(""), 3000);
+            setStatus(createStatus("Knowledge base saved successfully", "success"));
+            setTimeout(() => setStatus(null), 3000);
         } catch {
-            setStatus("❌ Failed to save knowledge base");
+            setStatus(createStatus("Failed to save knowledge base", "error"));
         }
     }
 
     async function handleClearAll() {
-        if (!window.confirm("⚠️ This will delete ALL documents from the knowledge base. Continue?")) {
+        if (!window.confirm("This will delete all documents from the knowledge base. Continue?")) {
             return;
         }
 
@@ -96,14 +115,14 @@ export default function Settings({ darkMode, toggleDarkMode, useRag, setUseRag }
             return;
         }
 
-        setStatus("Clearing all documents...");
+        setStatus(createStatus("Clearing all documents...", "info"));
         try {
             await clearAllDocuments();
-            setStatus("✅ All documents cleared!");
+            setStatus(createStatus("All documents cleared", "success"));
             await loadHealthAndStats();
-            setTimeout(() => setStatus(""), 3000);
+            setTimeout(() => setStatus(null), 3000);
         } catch {
-            setStatus("❌ Failed to clear documents");
+            setStatus(createStatus("Failed to clear documents", "error"));
         }
     }
 
@@ -113,13 +132,7 @@ export default function Settings({ darkMode, toggleDarkMode, useRag, setUseRag }
     }
 
     function getCapabilityBadge(cap) {
-        const badges = {
-            'vision': { icon: '👁️', label: 'Vision', color: 'purple' },
-            'coding': { icon: '💻', label: 'Coding', color: 'blue' },
-            'chat': { icon: '💬', label: 'Chat', color: 'green' },
-            'embedding': { icon: '🔢', label: 'Embedding', color: 'orange' }
-        };
-        return badges[cap] || { icon: '🤖', label: cap, color: 'gray' };
+        return getCapabilityBadgeMeta(cap);
     }
 
     const embeddingModels = models.filter((model) => model.capabilities.includes("embedding"));
@@ -127,12 +140,12 @@ export default function Settings({ darkMode, toggleDarkMode, useRag, setUseRag }
     return (
         <div className="settings-container">
             <div className="settings-header">
-                <h2>⚙️ Settings</h2>
+                <h2 className="section-title"><SettingsIcon size={22} /> Settings</h2>
             </div>
 
             {/* Appearance Settings */}
             <div className="settings-section">
-                <h3>🎨 Appearance</h3>
+                <h3 className="section-title"><PaletteIcon size={18} /> Appearance</h3>
                 <div className="setting-item">
                     <div className="setting-info">
                         <div className="setting-label">Dark Mode</div>
@@ -153,7 +166,7 @@ export default function Settings({ darkMode, toggleDarkMode, useRag, setUseRag }
 
             {/* RAG Settings */}
             <div className="settings-section">
-                <h3>🧠 AI Behavior</h3>
+                <h3 className="section-title"><BrainIcon size={18} /> AI Behavior</h3>
                 <div className="setting-item">
                     <div className="setting-info">
                         <div className="setting-label">RAG Mode</div>
@@ -174,7 +187,7 @@ export default function Settings({ darkMode, toggleDarkMode, useRag, setUseRag }
 
             {/* Models Section */}
             <div className="settings-section">
-                <h3>🤖 Available Models</h3>
+                <h3 className="section-title"><BotIcon size={18} /> Available Models</h3>
                 {models.length === 0 ? (
                     <p className="text-secondary">No models loaded. Pull models with: ollama pull &lt;model&gt;</p>
                 ) : (
@@ -190,7 +203,7 @@ export default function Settings({ darkMode, toggleDarkMode, useRag, setUseRag }
                                         const badge = getCapabilityBadge(cap);
                                         return (
                                             <span key={cap} className={`model-capability-badge ${badge.color}`} title={badge.label}>
-                                                {badge.icon} {badge.label}
+                                                <ModelCapabilityIcon capability={cap} size={14} /> {badge.label}
                                             </span>
                                         );
                                     })}
@@ -207,12 +220,12 @@ export default function Settings({ darkMode, toggleDarkMode, useRag, setUseRag }
                     onClick={loadModels}
                     style={{ marginTop: '12px' }}
                 >
-                    🔄 Refresh Models
+                    <RefreshIcon size={16} /> Refresh Models
                 </button>
             </div>
 
             <div className="settings-section">
-                <h3>🔢 Embedding Model</h3>
+                <h3 className="section-title"><DatabaseIcon size={18} /> Embedding Model</h3>
                 {embeddingModels.length === 0 ? (
                     <p className="text-secondary">No embedding-capable models detected. Pull one with: ollama pull qwen3-embedding:4b</p>
                 ) : (
@@ -255,7 +268,7 @@ export default function Settings({ darkMode, toggleDarkMode, useRag, setUseRag }
 
             {/* System Information */}
             <div className="settings-section">
-                <h3>📊 System Status</h3>
+                <h3 className="section-title"><DatabaseIcon size={18} /> System Status</h3>
                 {loading ? (
                     <div className="loading-state">
                         <div className="spinner"></div>
@@ -267,8 +280,8 @@ export default function Settings({ darkMode, toggleDarkMode, useRag, setUseRag }
                             <div className="info-grid">
                                 <div className="info-item">
                                     <span className="info-label">Status</span>
-                                    <span className={`info-value ${health.status === "healthy" ? "success" : "error"}`}>
-                                        {health.status === "healthy" ? "✅ Healthy" : "❌ Error"}
+                                    <span className={`info-value ${health.status === "healthy" ? "success" : "error"} icon-badge`}>
+                                        {health.status === "healthy" ? <CheckCircleIcon size={14} /> : <AlertIcon size={14} />} {health.status === "healthy" ? "Healthy" : "Error"}
                                     </span>
                                 </div>
                                 <div className="info-item">
@@ -309,51 +322,52 @@ export default function Settings({ darkMode, toggleDarkMode, useRag, setUseRag }
                     onClick={loadHealthAndStats}
                     disabled={loading}
                 >
-                    🔄 Refresh Status
+                    <RefreshIcon size={16} /> Refresh Status
                 </button>
             </div>
 
             {/* Data Management */}
             <div className="settings-section">
-                <h3>💾 Data Management</h3>
+                <h3 className="section-title"><DatabaseIcon size={18} /> Data Management</h3>
                 <div className="action-buttons">
                     <button
                         className="btn-primary"
                         onClick={handleSaveKB}
                     >
-                        💾 Save Knowledge Base
+                        <SaveIcon size={16} /> Save Knowledge Base
                     </button>
                     <button
                         className="btn-danger"
                         onClick={handleClearAll}
                     >
-                        🗑️ Clear All Documents
+                        <TrashIcon size={16} /> Clear All Documents
                     </button>
                 </div>
-                <p className="warning-text">
-                    ⚠️ Clearing all documents will permanently delete all uploaded files from the knowledge base.
+                <p className="warning-text icon-badge">
+                    <AlertIcon size={14} /> Clearing all documents will permanently delete all uploaded files from the knowledge base.
                 </p>
             </div>
 
             {/* Status Message */}
             {status && (
-                <div className={`status-banner ${status.includes("✅") ? "success" : status.includes("❌") ? "error" : ""}`}>
-                    {status}
+                <div className={`status-banner ${status.tone}`}>
+                    {status.tone === "success" ? <CheckCircleIcon size={16} /> : status.tone === "error" ? <AlertIcon size={16} /> : <RefreshIcon size={16} />}
+                    <span>{status.text}</span>
                 </div>
             )}
 
             {/* About Section */}
             <div className="settings-section about-section">
-                <h3>ℹ️ About</h3>
+                <h3 className="section-title"><InfoIcon size={18} /> About</h3>
                 <div className="about-content">
                     <p><strong>RAG Assistant</strong></p>
                     <p>A privacy-focused, offline AI chatbot using Retrieval-Augmented Generation.</p>
                     <div className="features-list">
-                        <div className="feature-badge">🔒 100% Private</div>
-                        <div className="feature-badge">💾 Offline First</div>
-                        <div className="feature-badge">⚡ Fast & Local</div>
-                        <div className="feature-badge">📚 Document RAG</div>
-                        <div className="feature-badge">🤖 Model Switching</div>
+                        <div className="feature-badge"><LockIcon size={14} /> 100% Private</div>
+                        <div className="feature-badge"><DatabaseIcon size={14} /> Offline First</div>
+                        <div className="feature-badge"><BoltIcon size={14} /> Fast &amp; Local</div>
+                        <div className="feature-badge"><LibraryIcon size={14} /> Document RAG</div>
+                        <div className="feature-badge"><BotIcon size={14} /> Model Switching</div>
                     </div>
                     <div className="tech-stack">
                         <p className="tech-label">Powered by:</p>

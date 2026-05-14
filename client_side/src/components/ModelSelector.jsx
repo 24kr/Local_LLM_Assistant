@@ -1,12 +1,21 @@
 import { useState, useEffect } from "react";
 import { listModels, switchModel, getCurrentModel } from "../services/api";
+import {
+    AlertIcon,
+    BotIcon,
+    CheckCircleIcon,
+    ModelCapabilityIcon,
+    RefreshIcon,
+    getCapabilityBadgeMeta,
+} from "./AppIcons";
+import { createStatus } from "../utils/modelStatus";
 
 export default function ModelSelector({ onModelChange, selectedModel }) {
     const [models, setModels] = useState([]);
     const [currentModel, setCurrentModel] = useState("");
     const [loading, setLoading] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
-    const [status, setStatus] = useState("");
+    const [status, setStatus] = useState(null);
 
     useEffect(() => {
         loadModels();
@@ -30,7 +39,7 @@ export default function ModelSelector({ onModelChange, selectedModel }) {
             setCurrentModel(currentData.llm_model);
         } catch (err) {
             console.error("Failed to load models:", err);
-            setStatus("⚠️ Failed to load models");
+            setStatus(createStatus("Failed to load models", "error"));
         } finally {
             setLoading(false);
         }
@@ -38,23 +47,23 @@ export default function ModelSelector({ onModelChange, selectedModel }) {
 
     async function handleModelSwitch(modelName) {
         setLoading(true);
-        setStatus("");
+        setStatus(null);
 
         try {
             await switchModel(modelName);
             setCurrentModel(modelName);
             setIsOpen(false);
-            setStatus(`✅ Switched to ${modelName}`);
+            setStatus(createStatus(`Switched to ${modelName}`, "success"));
 
             // Notify parent component
             if (onModelChange) {
                 onModelChange(modelName);
             }
 
-            setTimeout(() => setStatus(""), 3000);
+            setTimeout(() => setStatus(null), 3000);
         } catch (err) {
             console.error("Failed to switch model:", err);
-            setStatus(`❌ ${err.message}`);
+            setStatus(createStatus(err.message, "error"));
         } finally {
             setLoading(false);
         }
@@ -63,16 +72,6 @@ export default function ModelSelector({ onModelChange, selectedModel }) {
     function formatSize(bytes) {
         const gb = bytes / (1024 ** 3);
         return gb.toFixed(1) + " GB";
-    }
-
-    function getCapabilityIcon(capability) {
-        const icons = {
-            'vision': '👁️',
-            'coding': '💻',
-            'chat': '💬',
-            'embedding': '🔢'
-        };
-        return icons[capability] || '🤖';
     }
 
     function getModelShortName(fullName) {
@@ -88,7 +87,7 @@ export default function ModelSelector({ onModelChange, selectedModel }) {
                 disabled={loading}
                 title="Select Model"
             >
-                <span className="model-icon">🤖</span>
+                <BotIcon className="model-icon" size={18} />
                 <span className="model-name">{getModelShortName(currentModel)}</span>
                 <span className="dropdown-arrow">{isOpen ? '▲' : '▼'}</span>
             </button>
@@ -105,7 +104,7 @@ export default function ModelSelector({ onModelChange, selectedModel }) {
                                 disabled={loading}
                                 title="Refresh models"
                             >
-                                🔄
+                                <RefreshIcon size={16} />
                             </button>
                         </div>
 
@@ -141,7 +140,8 @@ export default function ModelSelector({ onModelChange, selectedModel }) {
                                             <div className="model-capabilities">
                                                 {model.capabilities.map((cap) => (
                                                     <span key={cap} className="capability-badge" title={cap}>
-                                                        {getCapabilityIcon(cap)}
+                                                        <ModelCapabilityIcon capability={cap} size={14} />
+                                                        <span>{getCapabilityBadgeMeta(cap).label}</span>
                                                     </span>
                                                 ))}
                                             </div>
@@ -154,7 +154,7 @@ export default function ModelSelector({ onModelChange, selectedModel }) {
 
                         <div className="dropdown-footer">
                             <p className="hint">
-                                💡 Different models have different strengths
+                                Different models have different strengths
                             </p>
                         </div>
                     </div>
@@ -162,8 +162,9 @@ export default function ModelSelector({ onModelChange, selectedModel }) {
             )}
 
             {status && (
-                <div className="model-status-toast">
-                    {status}
+                <div className={`model-status-toast ${status.tone}`}>
+                    {status.tone === "success" ? <CheckCircleIcon size={16} /> : <AlertIcon size={16} />}
+                    <span>{status.text}</span>
                 </div>
             )}
         </div>

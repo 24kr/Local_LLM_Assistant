@@ -1,8 +1,10 @@
+import { ChatBubbleIcon, LibraryIcon, RagOffIcon, RagOnIcon, SettingsIcon } from "./AppIcons";
+
 export default function Sidebar({ activeTab, setActiveTab, useRag, setUseRag }) {
     const tabs = [
-        { id: "chat", icon: "💬", label: "Chat" },
-        { id: "documents", icon: "📚", label: "Documents" },
-        { id: "settings", icon: "⚙️", label: "Settings" },
+        { id: "chat", icon: ChatBubbleIcon, label: "Chat" },
+        { id: "documents", icon: LibraryIcon, label: "Documents" },
+        { id: "settings", icon: SettingsIcon, label: "Settings" },
     ];
 
     return (
@@ -14,7 +16,7 @@ export default function Sidebar({ activeTab, setActiveTab, useRag, setUseRag }) 
                         className={`nav-item ${activeTab === tab.id ? "active" : ""}`}
                         onClick={() => setActiveTab(tab.id)}
                     >
-                        <span className="nav-icon">{tab.icon}</span>
+                        <tab.icon className="nav-icon" size={20} />
                         <span className="nav-label">{tab.label}</span>
                     </button>
                 ))}
@@ -31,7 +33,12 @@ export default function Sidebar({ activeTab, setActiveTab, useRag, setUseRag }) 
                         />
                         <span className="toggle-slider"></span>
                         <span className="toggle-text">
-                            {useRag ? "📚 RAG Enabled" : "🚫 RAG Disabled"}
+                            {useRag ? (
+                                <RagOnIcon className="toggle-text-icon" size={18} />
+                            ) : (
+                                <RagOffIcon className="toggle-text-icon" size={18} />
+                            )}
+                            <span>{useRag ? "RAG Enabled" : "RAG Disabled"}</span>
                         </span>
                     </label>
                     <p className="toggle-hint">

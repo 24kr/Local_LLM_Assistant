@@ -87,6 +87,26 @@ body {
   transition: var(--transition);
 }
 
+.app-icon {
+  display: inline-block;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+
+.section-title,
+.icon-badge,
+.file-name-with-icon,
+.doc-meta-item,
+.status-message__content {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.section-title {
+  line-height: 1.2;
+}
+
 /* ========================================
    App Container
 ======================================== */
@@ -130,13 +150,21 @@ body {
 }
 
 .logo-icon {
-  font-size: 24px;
+  width: 36px;
+  height: 36px;
+  display: block;
+  flex-shrink: 0;
 }
 
 .logo h1 {
   font-size: 20px;
   font-weight: 600;
   color: var(--text-primary);
+}
+
+.header-tagline {
+  font-size: 13px;
+  color: var(--text-secondary);
 }
 
 .subtitle {
@@ -225,7 +253,10 @@ body {
 }
 
 .nav-icon {
-  font-size: 20px;
+  width: 20px;
+  height: 20px;
+  display: block;
+  flex-shrink: 0;
 }
 
 .sidebar-footer {
@@ -244,6 +275,21 @@ body {
   flex-direction: column;
   gap: 8px;
   cursor: pointer;
+}
+
+.toggle-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.toggle-text-icon {
+  width: 18px;
+  height: 18px;
+  display: block;
+  flex-shrink: 0;
 }
 
 .toggle-input {
@@ -355,7 +401,11 @@ body {
 }
 
 .empty-icon {
-  font-size: 64px;
+  width: 64px;
+  height: 64px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   margin-bottom: 16px;
   opacity: 0.5;
 }
@@ -666,11 +716,13 @@ body {
 }
 
 .btn-clear-attachment {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: transparent;
   border: none;
   color: var(--text-secondary);
   cursor: pointer;
-  font-size: 14px;
   padding: 2px 6px;
 }
 
@@ -683,6 +735,9 @@ body {
 }
 
 .attach-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 44px;
   height: 44px;
   border: 1px solid var(--border-color);
@@ -691,7 +746,6 @@ body {
   color: var(--text-primary);
   cursor: pointer;
   transition: var(--transition);
-  font-size: 18px;
 }
 
 .attach-button:hover:not(:disabled) {
@@ -736,6 +790,9 @@ body {
 }
 
 .send-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 12px 20px;
   background: var(--accent-primary);
   color: white;
@@ -743,7 +800,6 @@ body {
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: var(--transition);
-  font-size: 16px;
 }
 
 .send-button:hover:not(:disabled) {
@@ -761,6 +817,13 @@ body {
   color: var(--text-tertiary);
 }
 
+.input-hint {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
 /* Error Banner */
 .error-banner {
   display: flex;
@@ -774,11 +837,13 @@ body {
 }
 
 .error-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   margin-left: auto;
   background: transparent;
   border: none;
   cursor: pointer;
-  font-size: 16px;
   color: var(--error);
   padding: 4px 8px;
 }
@@ -818,7 +883,7 @@ body {
 }
 
 .model-icon {
-  font-size: 18px;
+  color: var(--accent-primary);
 }
 
 .model-name {
@@ -884,10 +949,12 @@ body {
 }
 
 .btn-refresh {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: transparent;
   border: none;
   cursor: pointer;
-  font-size: 16px;
   padding: 4px 8px;
   border-radius: var(--radius-sm);
   transition: var(--transition);
@@ -1002,12 +1069,20 @@ body {
 
 .model-capabilities {
   display: flex;
-  gap: 4px;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .capability-badge {
-  font-size: 14px;
-  padding: 2px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-size: 11px;
 }
 
 .model-digest {
@@ -1033,6 +1108,9 @@ body {
   position: fixed;
   bottom: 60px;
   right: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   background: var(--bg-primary);
   border: 1px solid var(--border-color);
   padding: 12px 16px;
@@ -1041,6 +1119,14 @@ body {
   z-index: 1000;
   animation: slideInUp 0.3s ease;
   font-size: 14px;
+}
+
+.model-status-toast.success {
+  color: var(--success);
+}
+
+.model-status-toast.error {
+  color: var(--error);
 }
 
 @keyframes slideInUp {
@@ -1055,7 +1141,9 @@ body {
 }
 
 .current-model-badge {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   background: var(--accent-light);
   color: var(--accent-primary);
   padding: 8px 16px;
@@ -1265,7 +1353,12 @@ body {
 }
 
 .stat-icon {
-  font-size: 32px;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-primary);
 }
 
 .stat-value {
@@ -1323,7 +1416,12 @@ body {
 }
 
 .upload-icon {
-  font-size: 24px;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-primary);
 }
 
 .upload-text {
@@ -1352,11 +1450,13 @@ body {
 }
 
 .btn-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: transparent;
   border: none;
   cursor: pointer;
   color: var(--text-tertiary);
-  font-size: 16px;
   padding: 4px;
 }
 
@@ -1406,7 +1506,11 @@ body {
 }
 
 .doc-icon {
-  font-size: 28px;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .doc-info {
@@ -1437,6 +1541,7 @@ body {
 
 .doc-meta {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   font-size: 12px;
   color: var(--text-tertiary);
@@ -1444,10 +1549,12 @@ body {
 }
 
 .btn-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: transparent;
   border: none;
   cursor: pointer;
-  font-size: 20px;
   padding: 8px;
   border-radius: var(--radius-sm);
   color: var(--text-tertiary);
@@ -1468,12 +1575,19 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
 }
 
 .status-message.success {
   background: var(--success-light);
   color: var(--success);
   border: 1px solid var(--success);
+}
+
+.status-message.info {
+  background: var(--accent-light);
+  color: var(--accent-primary);
+  border: 1px solid var(--accent-primary);
 }
 
 .status-message.error {
@@ -1723,6 +1837,9 @@ body {
 }
 
 .feature-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   background: var(--accent-light);
   color: var(--accent-primary);
   padding: 6px 12px;
@@ -1767,6 +1884,12 @@ body {
   gap: 6px;
 }
 
+.status-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .status-indicator.success {
   color: var(--success);
 }
@@ -1787,6 +1910,10 @@ body {
    Buttons
 ======================================== */
 .btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   background: var(--accent-primary);
   color: white;
   border: none;
@@ -1808,6 +1935,10 @@ body {
 }
 
 .btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   background: var(--bg-secondary);
   color: var(--text-primary);
   border: 1px solid var(--border-color);
@@ -1825,6 +1956,10 @@ body {
 }
 
 .btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   background: var(--error);
   color: white;
   border: none;
@@ -1921,7 +2056,6 @@ button:disabled {
 }
 
 .update-banner__icon {
-  font-size: 15px;
   flex-shrink: 0;
 }
 
@@ -1956,6 +2090,9 @@ button:disabled {
 }
 
 .update-banner__btn--dismiss {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: transparent;
   color: var(--text-secondary);
   padding: 4px 6px;
@@ -1989,7 +2126,31 @@ button:disabled {
 }
 
 .status-banner {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
   animation: fadeIn 0.3s ease;
+}
+
+.status-banner.success {
+  background: var(--success-light);
+  color: var(--success);
+  border-color: var(--success);
+}
+
+.status-banner.error {
+  background: var(--error-light);
+  color: var(--error);
+  border-color: var(--error);
+}
+
+.status-banner.info {
+  background: var(--accent-light);
+  color: var(--accent-primary);
+  border-color: var(--accent-primary);
 }
 /* ========================================
    Chat History Panel
@@ -2021,7 +2182,7 @@ button:disabled {
 }
 
 .chat-history-toggle .icon {
-  font-size: 18px;
+  color: var(--accent-primary);
 }
 
 .chat-history-toggle .label {
@@ -2087,9 +2248,11 @@ button:disabled {
 }
 
 .close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: transparent;
   border: none;
-  font-size: 24px;
   cursor: pointer;
   color: var(--text-secondary);
   padding: 4px 8px;

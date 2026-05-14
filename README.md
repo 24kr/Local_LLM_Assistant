@@ -9,7 +9,7 @@
 [![Version](https://img.shields.io/badge/Version-1.0.24-green)]()
 [![Powered by](https://img.shields.io/badge/Powered%20by-Ollama-ff6b6b)]()
 
-**🔒 100% Private • 💾 Offline-First • 📚 Document RAG • 🎨 Modern UI**
+** 100% Private • Offline-First • Document RAG • Modern UI**
 
 [Features](#-features) • [Quick Start](#-quick-start) • [Installation](#-installation) • [Usage](#-usage) • [Documentation](#-documentation)
 
@@ -17,7 +17,7 @@
 
 </div>
 
-## 📖 Overview
+## Overview
 
 **LoLA (Local Large Language Model Assistant)** is a cutting-edge, privacy-focused desktop application that brings enterprise-grade AI capabilities directly to your local machine. Built with modern technologies and powered by [Mistral AI](https://mistral.ai/news/mistral-3), LoLA enables you to interact with your documents using state-of-the-art language models—completely offline and secure.
 
@@ -25,53 +25,53 @@
 
 | Feature | Description |
 |---------|-------------|
-| 🔒 **100% Private** | Your data never leaves your machine. No cloud, no tracking, no compromises. |
-| 💾 **Offline-First** | Work anywhere, anytime. No internet required after initial setup. |
-| 📚 **Advanced RAG** | Retrieval-Augmented Generation for context-aware, accurate responses. |
-| 🤖 **Model Switching** | Seamlessly switch between models for optimal performance. |
-| 👁️ **Vision AI** | Analyze images with built-in vision model support. |
-| 💻 **Code Understanding** | Process and query 40+ programming file formats. |
-| 🌍 **Multi-Format** | PDF, DOCX, XLSX, images, code files, and more. |
-| 🎨 **Modern UI** | Sleek dark mode, chat sessions, and intuitive design. |
-| ⚡ **High Performance** | Optimized for speed and efficiency. |
+| **100% Private** | Your data never leaves your machine. No cloud, no tracking, no compromises. |
+| **Offline-First** | Work anywhere, anytime. No internet required after initial setup. |
+| **Advanced RAG** | Retrieval-Augmented Generation for context-aware, accurate responses. |
+| **Model Switching** | Seamlessly switch between models for optimal performance. |
+| **Vision AI** | Analyze images with built-in vision model support. |
+| **Code Understanding** | Process and query 40+ programming file formats. |
+| **Multi-Format** | PDF, DOCX, XLSX, images, code files, and more. |
+| **Modern UI** | Sleek dark mode, chat sessions, and intuitive design. |
+| **High Performance** | Optimized for speed and efficiency. |
 
 ---
 
-## ✨ Features
+## Features
 
-### 🎯 Core Capabilities
+### Core Capabilities
 
 #### **Intelligent Chat System**
-- 💬 Natural conversation with advanced language models
-- 🔄 Multiple chat sessions with auto-save
-- 📝 Export conversations to text files
-- 🎭 Context-aware responses using RAG
+- Natural conversation with advanced language models
+- Multiple chat sessions with auto-save
+- Export conversations to text files
+- Context-aware responses using RAG
 
 #### **Document Intelligence**
-- 📄 Upload and process multiple document formats
-- 🔍 Semantic search with vector embeddings
-- 📊 Smart chunking with configurable overlap
-- 🗑️ Easy document management (upload, view, delete)
+- Upload and process multiple document formats
+- Semantic search with vector embeddings
+- Smart chunking with configurable overlap
+- Easy document management (upload, view, delete)
 
-#### **Vision Capabilities** 🆕
-- 👁️ Image analysis using vision-capable models (Ministral-3, LLaVA)
-- 🖼️ Extract text and describe content from images
-- 📸 On-demand processing for optimal performance
-- 🎨 Support for PNG, JPG, SVG, GIF, WebP, and more
+#### **Vision Capabilities** 
+- Image analysis using vision-capable models (Ministral-3, LLaVA)
+- Extract text and describe content from images
+- On-demand processing for optimal performance
+- Support for PNG, JPG, SVG, GIF, WebP, and more
 
-#### **Code Understanding** 🆕
-- 💻 Process 40+ programming languages
-- 📝 Read HTML, CSS, JavaScript, Python, Java, C++, Go, Rust, and more
-- 🔧 Configuration files (JSON, YAML, XML, ENV)
-- 📋 Markdown and documentation files
+#### **Code Understanding** 
+- Process 40+ programming languages
+- Read HTML, CSS, JavaScript, Python, Java, C++, Go, Rust, and more
+- Configuration files (JSON, YAML, XML, ENV)
+- Markdown and documentation files
 
-#### **Dynamic Model Management** 🆕
-- 🤖 Switch models on-the-fly without restart
-- 🏷️ Auto-detect model capabilities (Vision, Coding, Chat, Embedding)
-- 📊 View model details (size, capabilities, status)
-- ⚡ Quick model selector in chat interface
+#### **Dynamic Model Management** 
+- Switch models on-the-fly without restart
+- Auto-detect model capabilities (Vision, Coding, Chat, Embedding)
+- View model details (size, capabilities, status)
+- Quick model selector in chat interface
 
-### 🎨 User Experience
+### User Experience
 
 - **Dark Mode** - Eye-friendly interface with modern design
 - **Chat History** - Browse and manage multiple conversation threads
@@ -90,7 +90,7 @@
 
 ---
 
-## 📦 Supported File Formats
+## Supported File Formats
 
 ### Documents
 | Format | Extensions | Status | Use Case |
@@ -101,7 +101,7 @@
 | Excel | `.xlsx`, `.xls` | ✅ | Data analysis, spreadsheets |
 | CSV | `.csv` | ✅ | Datasets, exports |
 
-### Images 🆕
+### Images 
 | Format | Extensions | Status | Features |
 |--------|-----------|--------|----------|
 | PNG | `.png` | ✅ | Screenshots, diagrams |
@@ -110,7 +110,7 @@
 | GIF | `.gif` | ✅ | Animations, icons |
 | WebP | `.webp`, `.bmp` | ✅ | Modern formats |
 
-### Code Files 🆕
+### Code Files 
 | Category | Extensions | Count |
 |----------|-----------|-------|
 | Web | `.html`, `.css`, `.js`, `.jsx`, `.ts`, `.tsx` | 6 |
@@ -124,7 +124,7 @@
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 LoLA/
@@ -137,7 +137,7 @@ LoLA/
 │   │   │   ├── ChatBox.jsx           # Main chat interface
 │   │   │   ├── ChatHistory.jsx       # Session management
 │   │   │   ├── DocumentManager.jsx   # File uploads
-│   │   │   ├── ModelSelector.jsx     # Model switching 🆕
+│   │   │   ├── ModelSelector.jsx     # Model switching 
 │   │   │   ├── Settings.jsx          # Configuration
 │   │   │   ├── Sidebar.jsx           # Navigation
 │   │   │   ├── StatusBar.jsx         # Status display
@@ -173,7 +173,7 @@ LoLA/
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -203,7 +203,7 @@ ollama pull llama3             # Fast general-purpose model
 ollama list        # Should show installed models
 ```
 
-### One-Click Launch 🎯
+### One-Click Launch
 
 **Windows:**
 ```bash
@@ -229,7 +229,7 @@ The launcher will:
 
 ---
 
-## 📥 Installation
+## Installation
 
 ### Option 1: Automated Setup (Recommended)
 
@@ -277,7 +277,7 @@ npm run electron:dev
 
 ---
 
-## 📱 Desktop Application
+## Desktop Application
 
 ### Development Mode
 ```bash
@@ -308,7 +308,7 @@ npm run electron:build:all     # All platforms
 
 ---
 
-## 💡 Usage Guide
+## Usage Guide
 
 ### Getting Started
 
@@ -322,21 +322,21 @@ npm run electron:build:all     # All platforms
    - Or use `npm run electron:dev` for development
 
 3. **Check Status:**
-   - Green "Server: Connected" in status bar = Ready! ✅
+   - Green "Server: Connected" in status bar = Ready!
 
 ### Core Workflows
 
-#### **📚 Document Upload**
+#### **Document Upload**
 1. Navigate to **Documents** tab
 2. Click **"Choose a file"** or drag & drop
 3. Select file (max 50MB)
-4. Click **"📤 Upload Document"**
+4. Click **"Upload Document"**
 5. Wait for processing (chunks created)
 6. Document appears in library
 
 **Supported:** PDF, DOCX, TXT, CSV, XLSX, Images, Code files
 
-#### **💬 Chat with Documents**
+#### **Chat with Documents**
 1. Navigate to **Chat** tab
 2. Ensure **RAG Enabled** (toggle in sidebar)
 3. Type your question about uploaded documents
@@ -348,12 +348,12 @@ npm run electron:build:all     # All platforms
 - Reference filenames: "What's in FSI-2023.xlsx?"
 - Use vision models for image questions
 
-#### **🤖 Switch Models** 🆕
-1. Click **🤖 Model Dropdown** in chat header
+#### **Switch Models** 
+1. Click **Model Dropdown** in chat header
 2. Browse available models with capabilities:
-   - 👁️ Vision - Can analyze images
-   - 💻 Coding - Optimized for code
-   - 💬 Chat - General conversation
+   - Vision - Can analyze images
+   - Coding - Optimized for code
+   - Chat - General conversation
 3. Click model to switch instantly
 4. Current model shown with ✓ checkmark
 
@@ -363,20 +363,20 @@ npm run electron:build:all     # All platforms
 - **codellama** - Superior code generation
 - **llama3** - Fast, lightweight responses
 
-#### **👁️ Image Analysis** 🆕
+#### **Image Analysis** 
 1. Upload an image (PNG, JPG, etc.)
 2. Switch to vision model (ministral-3 or llava)
 3. Ask: "What's in the image?", "Describe this picture"
 4. AI analyzes and describes content
 
-#### **💾 Manage Chat Sessions**
-1. Click **💬 Chats** to view history
+#### **Manage Chat Sessions**
+1. Click **Chats** to view history
 2. Click session to load
-3. Click **➕ New** for fresh conversation
-4. Click **🗑️** on session to delete
-5. Click **📥 Export** to save as text
+3. Click **New** for fresh conversation
+4. Click **Delete** on session to delete
+5. Click **Export** to save as text
 
-#### **⚙️ Settings & Configuration**
+#### **Settings & Configuration**
 1. Navigate to **Settings** tab
 2. Toggle **Dark Mode** for theme
 3. Toggle **RAG Mode** for document context
@@ -386,7 +386,7 @@ npm run electron:build:all     # All platforms
 
 ---
 
-## ⚙️ Configuration
+## Configuration
 
 ### Environment Variables
 
@@ -484,7 +484,7 @@ Body: {
 }
 ```
 
-#### **Models** 🆕
+#### **Models**
 ```http
 GET  /models/list       # List available models
 POST /models/switch     # Switch active model
@@ -517,11 +517,11 @@ POST   /chats/export/{id}       # Export as text
 
 ---
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
-**❌ "Failed to connect to backend"**
+**"Failed to connect to backend"**
 ```bash
 # Check if backend is running
 curl http://localhost:8000/health
@@ -535,7 +535,7 @@ cd server_side
 python -m uvicorn main:app --reload
 ```
 
-**❌ "Ollama not responding"**
+**"Ollama not responding"**
 ```bash
 # Start Ollama service
 ollama serve
@@ -547,7 +547,7 @@ ollama list
 ollama pull ministral-3
 ```
 
-**❌ "Model not found"**
+**"Model not found"**
 ```bash
 # Check available models in app
 Settings → Available Models → Refresh
@@ -556,13 +556,13 @@ Settings → Available Models → Refresh
 ollama pull <model-name>
 ```
 
-**❌ "Image processing failed"**
+**"Image processing failed"**
 - Ensure using vision-capable model (ministral-3, llava)
 - Check image size (<10MB recommended)
 - Verify file format is supported
 - Check available system memory
 
-**❌ "Frontend won't start"**
+**"Frontend won't start"**
 ```bash
 # Clear cache and reinstall
 cd client_side
@@ -571,7 +571,7 @@ npm install
 npm run dev
 ```
 
-**❌ "Port already in use"**
+**"Port already in use"**
 ```bash
 # Kill process on port 8000 (Windows)
 netstat -ano | findstr :8000
@@ -600,13 +600,13 @@ LOG_LEVEL=DEBUG
 
 ### Getting Help
 
-- 🐛 **Bug Reports:** [GitHub Issues](https://github.com/24kr/Local_App_RAG-Technique/issues)
-- 💬 **Discussions:** [GitHub Discussions](https://github.com/24kr/Local_App_RAG-Technique/discussions)
-- 📖 **Documentation:** [Wiki](https://github.com/24kr/Local_App_RAG-Technique/wiki)
+- **Bug Reports:** [GitHub Issues](https://github.com/24kr/Local_App_RAG-Technique/issues)
+- **Discussions:** [GitHub Discussions](https://github.com/24kr/Local_App_RAG-Technique/discussions)
+- **Documentation:** [Wiki](https://github.com/24kr/Local_App_RAG-Technique/wiki)
 
 ---
 
-## 🗺️ Roadmap
+## Roadmap
 
 ### Version 1.1 (Q2 2025)
 - [ ] Multi-language UI (i18n)
@@ -631,7 +631,7 @@ LOG_LEVEL=DEBUG
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 We welcome contributions! Here's how to get started:
 
@@ -656,7 +656,7 @@ Be respectful, inclusive, and professional. See [CODE_OF_CONDUCT.md](CODE_OF_CON
 
 ---
 
-## 📄 License
+## License
 
 This project is licensed under the **Apache License 2.0**.
 
@@ -680,7 +680,7 @@ See [LICENSE](LICENSE) for full text.
 
 ---
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 ### Technologies
 - **[Ollama](https://ollama.com/)** - Local LLM runtime
@@ -702,7 +702,7 @@ See [LICENSE](LICENSE) for full text.
 
 ---
 
-## 📊 Project Stats
+## Project Stats
 
 - **Lines of Code:** 10,000+
 - **Components:** 15+
@@ -713,7 +713,7 @@ See [LICENSE](LICENSE) for full text.
 
 ---
 
-## 🔗 Links
+## Links
 
 - **Repository:** [github.com/24kr/Local_App_RAG-Technique](https://github.com/24kr/Local_App_RAG-Technique)
 - **Issues:** [Report a bug](https://github.com/24kr/Local_App_RAG-Technique/issues)
@@ -724,9 +724,9 @@ See [LICENSE](LICENSE) for full text.
 
 <div align="center">
 
-### 🌟 Star this project if you find it useful!
+### Star this project if you find it useful!
 
-**Built with ❤️ for Privacy-First AI**
+**Built with love for Privacy-First AI**
 
 [⬆ Back to Top](#-lola---local-llm-assistant)
 

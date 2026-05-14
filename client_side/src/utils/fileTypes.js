@@ -6,6 +6,53 @@ export const SUPPORTED_ATTACHMENT_EXTENSIONS = [
     ".yml", ".xml", ".sql", ".c", ".h",
 ];
 
+export const FILE_TYPE_META = {
+    pdf: { label: "PDF", tone: "red" },
+    doc: { label: "DOC", tone: "blue" },
+    docx: { label: "DOCX", tone: "blue" },
+    xls: { label: "XLS", tone: "green" },
+    xlsx: { label: "XLSX", tone: "green" },
+    csv: { label: "CSV", tone: "emerald" },
+    txt: { label: "TXT", tone: "slate" },
+    md: { label: "MD", tone: "slate" },
+    png: { label: "PNG", tone: "pink" },
+    jpg: { label: "JPG", tone: "pink" },
+    jpeg: { label: "JPEG", tone: "pink" },
+    svg: { label: "SVG", tone: "purple" },
+    ico: { label: "ICO", tone: "indigo" },
+    gif: { label: "GIF", tone: "orange" },
+    tif: { label: "TIF", tone: "amber" },
+    tiff: { label: "TIFF", tone: "amber" },
+    webp: { label: "WEBP", tone: "rose" },
+    bmp: { label: "BMP", tone: "cyan" },
+    html: { label: "HTML", tone: "orange" },
+    css: { label: "CSS", tone: "cyan" },
+    js: { label: "JS", tone: "amber" },
+    jsx: { label: "JSX", tone: "amber" },
+    json: { label: "JSON", tone: "purple" },
+    cpp: { label: "C++", tone: "indigo" },
+    c: { label: "C", tone: "indigo" },
+    h: { label: "H", tone: "indigo" },
+    py: { label: "PY", tone: "yellow" },
+    ts: { label: "TS", tone: "blue" },
+    tsx: { label: "TSX", tone: "blue" },
+    env: { label: "ENV", tone: "emerald" },
+    bat: { label: "BAT", tone: "slate" },
+    sh: { label: "SH", tone: "slate" },
+    php: { label: "PHP", tone: "purple" },
+    cs: { label: "C#", tone: "green" },
+    rb: { label: "RB", tone: "rose" },
+    java: { label: "JAVA", tone: "orange" },
+    go: { label: "GO", tone: "teal" },
+    rs: { label: "RS", tone: "orange" },
+    yaml: { label: "YAML", tone: "emerald" },
+    yml: { label: "YML", tone: "emerald" },
+    xml: { label: "XML", tone: "orange" },
+    sql: { label: "SQL", tone: "blue" },
+};
+
+const DEFAULT_FILE_TYPE_META = { label: "FILE", tone: "slate" };
+
 const IMAGE_EXTENSIONS = ["png", "jpg", "jpeg", "gif", "svg", "ico", "webp", "bmp", "tif", "tiff"];
 
 export function getFileExtension(filename = "") {
@@ -28,26 +75,11 @@ export function formatFileSize(bytes) {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export function getFileIcon(filename = "") {
+export function getFileTypeMeta(filename = "") {
     const ext = getFileExtension(filename);
+    return FILE_TYPE_META[ext] || { ...DEFAULT_FILE_TYPE_META, label: ext ? ext.toUpperCase() : DEFAULT_FILE_TYPE_META.label };
+}
 
-    if (IMAGE_EXTENSIONS.includes(ext)) return "🖼️";
-    if (["pdf"].includes(ext)) return "📕";
-    if (["docx", "doc"].includes(ext)) return "📘";
-    if (["xlsx", "xls", "csv"].includes(ext)) return "📊";
-    if (["txt", "md"].includes(ext)) return "📄";
-    if (["html", "css"].includes(ext)) return "🌐";
-    if (["js", "jsx", "ts", "tsx", "json"].includes(ext)) return "⚙️";
-    if (["py"].includes(ext)) return "🐍";
-    if (["java"].includes(ext)) return "☕";
-    if (["cpp", "c", "h"].includes(ext)) return "⚡";
-    if (["php"].includes(ext)) return "🐘";
-    if (["rb"].includes(ext)) return "💎";
-    if (["go"].includes(ext)) return "🔷";
-    if (["rs"].includes(ext)) return "🦀";
-    if (["sh", "bat"].includes(ext)) return "🖥️";
-    if (["yaml", "yml", "xml", "env"].includes(ext)) return "⚙️";
-    if (["sql"].includes(ext)) return "🗄️";
-
-    return "📎";
+export function getFileIcon(filename = "") {
+    return getFileTypeMeta(filename).label;
 }

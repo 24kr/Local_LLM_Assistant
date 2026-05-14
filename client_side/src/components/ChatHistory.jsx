@@ -1,36 +1,20 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { ChatBubbleIcon, CloseIcon, PlusIcon, TrashIcon } from "./AppIcons";
 
 export default function ChatHistory({ currentChatId, onSelectChat, onNewChat, onDeleteChat }) {
-    const [chats, setChats] = useState([]);
-    const [isOpen, setIsOpen] = useState(false);
-
-    // Load chats on mount only
-    useEffect(() => {
+    const [chats, setChats] = useState(() => {
         const savedChats = localStorage.getItem('allChats');
         if (savedChats) {
             try {
-                const parsedChats = JSON.parse(savedChats);
-                setChats(parsedChats);
+                return JSON.parse(savedChats);
             } catch (e) {
                 console.error('Error loading chats:', e);
+                return [];
             }
         }
-    }, []); // Empty dependency array - runs once on mount
-
-    // Reload chats when panel opens
-    useEffect(() => {
-        if (isOpen) {
-            const savedChats = localStorage.getItem('allChats');
-            if (savedChats) {
-                try {
-                    const parsedChats = JSON.parse(savedChats);
-                    setChats(parsedChats);
-                } catch (e) {
-                    console.error('Error loading chats:', e);
-                }
-            }
-        }
-    }, [isOpen]);
+        return [];
+    });
+    const [isOpen, setIsOpen] = useState(false);
 
     function handleDelete(chatId, e) {
         e.stopPropagation();
@@ -78,7 +62,7 @@ export default function ChatHistory({ currentChatId, onSelectChat, onNewChat, on
                 onClick={() => setIsOpen(!isOpen)}
                 title="Chat History"
             >
-                <span className="icon">💬</span>
+                <ChatBubbleIcon className="icon" size={18} />
                 <span className="label">Chats</span>
                 <span className="badge">{chats.length}</span>
             </button>
@@ -89,14 +73,14 @@ export default function ChatHistory({ currentChatId, onSelectChat, onNewChat, on
                     <div className="chat-history-panel">
                         <div className="chat-history-header">
                             <h3>Chat History</h3>
-                            <button className="close-btn" onClick={() => setIsOpen(false)}>✕</button>
+                            <button className="close-btn" onClick={() => setIsOpen(false)}><CloseIcon size={18} /></button>
                         </div>
 
                         <button className="new-chat-btn" onClick={() => {
                             onNewChat();
                             setIsOpen(false);
                         }}>
-                            ➕ New Chat
+                            <PlusIcon size={16} /> New Chat
                         </button>
 
                         <div className="chats-list">
@@ -122,7 +106,7 @@ export default function ChatHistory({ currentChatId, onSelectChat, onNewChat, on
                                                 onClick={(e) => handleDelete(chat.id, e)}
                                                 title="Delete chat"
                                             >
-                                                🗑️
+                                                <TrashIcon size={16} />
                                             </button>
                                         </div>
                                         <div className="chat-preview">{getPreview(chat)}</div>

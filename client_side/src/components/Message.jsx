@@ -1,10 +1,11 @@
 import { API_URL } from "../services/api";
-import { formatFileSize, getFileIcon } from "../utils/fileTypes";
+import { formatFileSize } from "../utils/fileTypes";
+import { FileTypeIcon } from "./AppIcons";
 
 export default function Message({ role, text, attachments = [] }) {
     return (
         <div className={`message ${role}`}>
-            <strong>{role === "user" ? "You" : "AI"}:</strong>
+            <strong>{role === "user" ? "Me" : "LoLA"}:</strong>
             <p>{text}</p>
             {attachments.length > 0 && (
                 <div className="message-attachments">
@@ -17,7 +18,7 @@ export default function Message({ role, text, attachments = [] }) {
                             rel="noreferrer"
                             title={attachment.filename}
                         >
-                            <span>{getFileIcon(attachment.filename)}</span>
+                            <FileTypeIcon filename={attachment.filename} size={20} />
                             <span>{attachment.filename}</span>
                             <span className="message-attachment-size">{formatFileSize(attachment.size)}</span>
                         </a>
