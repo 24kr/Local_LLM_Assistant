@@ -1,0 +1,55 @@
+services:
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "${OLLAMA_PORT:-11434}:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./server_side
+    environment:
+      HOST: 0.0.0.0
+      PORT: 8000
+      OLLAMA_HOST: http://ollama:11434
+      CORS_ORIGINS: '["http://localhost:${WEB_PORT:-8080}", "http://127.0.0.1:${WEB_PORT:-8080}", "http://localhost:5173", "http://127.0.0.1:5173"]'
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      - backend_storage:/app/storage
+      - backend_uploads:/app/uploads
+    depends_on:
+      ollama:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./client_side
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:${API_PORT:-8000}}
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  backend_storage:
+  backend_uploads:
+  ollama_data:
