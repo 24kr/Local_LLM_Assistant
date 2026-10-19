@@ -229,6 +229,34 @@ The launcher will:
 
 ---
 
+## Docker Deployment
+
+Docker Compose builds and runs the web frontend, FastAPI backend, and Ollama service. Install Docker Desktop (or Docker Engine with the Compose plugin), then run from the repository root:
+
+```bash
+# Build the backend and frontend images
+docker compose build
+
+# Start the application and Ollama
+docker compose up -d
+
+# Download the default models used by the backend
+docker compose exec ollama ollama pull qwen3
+docker compose exec ollama ollama pull qwen3-embedding
+```
+
+Open the app at `http://localhost:8080`; the backend API is at `http://localhost:8000` and its interactive docs at `http://localhost:8000/docs`. The first model downloads can take a while. Persistent Docker volumes retain Ollama models and backend documents/chat data across restarts.
+
+To stop the services while keeping data:
+
+```bash
+docker compose down
+```
+
+Use `docker compose down -v` only if you also want to delete the persisted models and app data. Ports can be changed by setting `WEB_PORT`, `API_PORT`, or `OLLAMA_PORT` before starting Compose.
+
+---
+
 ## Installation
 
 ### Option 1: Automated Setup (Recommended)
